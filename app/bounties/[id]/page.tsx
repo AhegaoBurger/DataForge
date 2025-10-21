@@ -1,51 +1,142 @@
-import { Navigation } from "@/components/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
-import Link from "next/link"
+"use client";
 
-// Mock bounty data - in real app, fetch by ID
-const bounty = {
-  id: "1",
-  title: "Kitchen Cleaning Tasks",
-  description:
-    "Record videos of various kitchen cleaning activities including wiping counters, washing dishes, and organizing cabinets. We need diverse examples from different kitchens and cleaning styles to train our household robotics AI.",
-  reward: 2.5,
-  videosNeeded: 500,
-  videosSubmitted: 342,
-  category: "Household",
-  difficulty: "Easy",
-  duration: "2-3 min",
-  requirements: [
-    "Clear lighting - ensure the task area is well-lit",
-    "Stable camera - use a tripod or stable surface when possible",
-    "Show full task - capture the complete cleaning action from start to finish",
-    "Multiple angles - if possible, record from 2-3 different viewpoints",
-    "Audio optional - background noise is acceptable",
-  ],
-  guidelines: [
-    "Start recording before beginning the task",
-    "Perform the task naturally as you normally would",
-    "Ensure hands and objects are clearly visible",
-    "Avoid covering the camera lens",
-    "End recording after task completion",
-  ],
-  examples: [
-    "Wiping kitchen counters with a cloth",
-    "Washing dishes in the sink",
-    "Loading/unloading dishwasher",
-    "Organizing items in cabinets",
-    "Cleaning stovetop or oven",
-  ],
-  company: "HomeBot Robotics",
-  postedDate: "2025-01-15",
-  expiryDate: "2025-03-15",
+import { Navigation } from "@/components/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+
+interface Bounty {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  videos_needed: number;
+  videos_submitted: number;
+  category: string;
+  difficulty: string;
+  duration: string;
+  requirements: string[];
+  guidelines?: string[];
+  examples?: string[];
+  creator_id: string;
+  profiles?: {
+    display_name: string;
+    avatar_url?: string;
+  };
+  posted_date?: string;
+  expiry_date?: string;
 }
 
 export default function BountyDetailPage() {
-  const progress = (bounty.videosSubmitted / bounty.videosNeeded) * 100
+  const params = useParams();
+  const bountyId = params.id as string;
+
+  const [bounty, setBounty] = useState<Bounty | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (bountyId) {
+      fetchBounty();
+    }
+  }, [bountyId]);
+
+  const fetchBounty = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/bounties/${bountyId}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Bounty not found");
+        }
+        throw new Error("Failed to fetch bounty");
+      }
+
+      const data = await response.json();
+      setBounty(data.bounty);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-6">
+              <div className="h-8 w-32 animate-pulse rounded bg-muted" />
+            </div>
+            <div className="space-y-4">
+              <div className="h-12 w-3/4 animate-pulse rounded bg-muted" />
+              <div className="h-6 w-1/2 animate-pulse rounded bg-muted" />
+              <div className="h-64 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !bounty) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
+          <div className="mx-auto max-w-4xl">
+            <Button variant="ghost" asChild className="mb-6">
+              <Link href="/bounties">
+                <svg
+                  className="mr-2 h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to Bounties
+              </Link>
+            </Button>
+
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-8 text-center">
+              <h3 className="text-lg font-semibold text-destructive">
+                {error || "Bounty not found"}
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {error
+                  ? "Please try again later"
+                  : "This bounty may have been removed or is no longer active"}
+              </p>
+              <div className="mt-4 flex gap-3 justify-center">
+                <Button onClick={fetchBounty} variant="outline">
+                  Try Again
+                </Button>
+                <Button asChild>
+                  <Link href="/bounties">Browse All Bounties</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = (bounty.videos_submitted / bounty.videos_needed) * 100;
 
   return (
     <div className="min-h-screen">
@@ -56,8 +147,18 @@ export default function BountyDetailPage() {
           {/* Back Button */}
           <Button variant="ghost" asChild className="mb-6">
             <Link href="/bounties">
-              <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Back to Bounties
             </Link>
@@ -79,10 +180,16 @@ export default function BountyDetailPage() {
               >
                 {bounty.difficulty}
               </Badge>
-              <span className="text-sm text-muted-foreground">Posted by {bounty.company}</span>
+              <span className="text-sm text-muted-foreground">
+                Posted by {bounty.profiles?.display_name || "Anonymous"}
+              </span>
             </div>
-            <h1 className="text-balance text-4xl font-bold lg:text-5xl">{bounty.title}</h1>
-            <p className="mt-4 text-pretty text-lg text-muted-foreground leading-relaxed">{bounty.description}</p>
+            <h1 className="text-balance text-4xl font-bold lg:text-5xl">
+              {bounty.title}
+            </h1>
+            <p className="mt-4 text-pretty text-lg text-muted-foreground leading-relaxed">
+              {bounty.description}
+            </p>
           </div>
 
           {/* Reward Card */}
@@ -90,20 +197,26 @@ export default function BountyDetailPage() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
                 <div className="text-center sm:text-left">
-                  <div className="text-5xl font-bold text-primary">${bounty.reward}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">per accepted video</div>
+                  <div className="text-5xl font-bold text-primary">
+                    ${bounty.reward}
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    per accepted video
+                  </div>
                 </div>
                 <div className="flex-1">
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="font-medium">
-                      {bounty.videosSubmitted} / {bounty.videosNeeded} videos
+                      {bounty.videos_submitted} / {bounty.videos_needed} videos
                     </span>
                   </div>
                   <Progress value={progress} className="h-3" />
                 </div>
                 <Button size="lg" asChild>
-                  <Link href={`/bounties/${bounty.id}/submit`}>Submit Video</Link>
+                  <Link href={`/bounties/${bounty.id}/submit`}>
+                    Submit Video
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -116,7 +229,7 @@ export default function BountyDetailPage() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-3">
-                {bounty.requirements.map((req, index) => (
+                {bounty.requirements?.map((req, index) => (
                   <li key={index} className="flex gap-3">
                     <svg
                       className="h-5 w-5 shrink-0 text-primary"
@@ -124,7 +237,12 @@ export default function BountyDetailPage() {
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
                     </svg>
                     <span className="text-sm leading-relaxed">{req}</span>
                   </li>
@@ -134,40 +252,46 @@ export default function BountyDetailPage() {
           </Card>
 
           {/* Guidelines */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Recording Guidelines</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ol className="space-y-3">
-                {bounty.guidelines.map((guideline, index) => (
-                  <li key={index} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-xs font-semibold text-secondary">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm leading-relaxed">{guideline}</span>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
+          {bounty.guidelines && bounty.guidelines.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Recording Guidelines</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-3">
+                  {bounty.guidelines.map((guideline, index) => (
+                    <li key={index} className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-xs font-semibold text-secondary">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm leading-relaxed">
+                        {guideline}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Examples */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Example Tasks</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {bounty.examples.map((example, index) => (
-                  <li key={index} className="flex gap-3 text-sm">
-                    <span className="text-muted-foreground">•</span>
-                    <span>{example}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          {bounty.examples && bounty.examples.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Example Tasks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {bounty.examples.map((example, index) => (
+                    <li key={index} className="flex gap-3 text-sm">
+                      <span className="text-muted-foreground">•</span>
+                      <span>{example}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Details */}
           <Card>
@@ -176,23 +300,39 @@ export default function BountyDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Duration per video</span>
+                <span className="text-muted-foreground">
+                  Duration per video
+                </span>
                 <span className="font-medium">{bounty.duration}</span>
               </div>
               <Separator />
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Posted date</span>
-                <span className="font-medium">{new Date(bounty.postedDate).toLocaleDateString()}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Expires</span>
-                <span className="font-medium">{new Date(bounty.expiryDate).toLocaleDateString()}</span>
-              </div>
-              <Separator />
+              {bounty.posted_date && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Posted date</span>
+                    <span className="font-medium">
+                      {new Date(bounty.posted_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <Separator />
+                </>
+              )}
+              {bounty.expiry_date && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Expires</span>
+                    <span className="font-medium">
+                      {new Date(bounty.expiry_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <Separator />
+                </>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Company</span>
-                <span className="font-medium">{bounty.company}</span>
+                <span className="font-medium">
+                  {bounty.profiles?.display_name || "Anonymous"}
+                </span>
               </div>
             </CardContent>
           </Card>
@@ -200,7 +340,9 @@ export default function BountyDetailPage() {
           {/* CTA */}
           <div className="mt-8 text-center">
             <Button size="lg" asChild className="min-w-[200px]">
-              <Link href={`/bounties/${bounty.id}/submit`}>Submit Your Video</Link>
+              <Link href={`/bounties/${bounty.id}/submit`}>
+                Submit Your Video
+              </Link>
             </Button>
             <p className="mt-3 text-sm text-muted-foreground">
               Connect your wallet to submit and receive instant payment
@@ -209,5 +351,5 @@ export default function BountyDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

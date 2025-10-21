@@ -1,86 +1,163 @@
-import { Navigation } from "@/components/navigation"
-import { BountyCard } from "@/components/bounty-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+"use client";
 
-// Mock bounty data
-const bounties = [
-  {
-    id: "1",
-    title: "Kitchen Cleaning Tasks",
-    description: "Record videos of various kitchen cleaning activities including wiping counters, washing dishes, and organizing cabinets.",
-    reward: 2.5,
-    videosNeeded: 500,
-    videosSubmitted: 342,
-    category: "Household",
-    difficulty: "Easy",
-    duration: "2-3 min",
-    requirements: ["Clear lighting", "Stable camera", "Show full task"],
-  },
-  {
-    id: "2",
-    title: "Object Manipulation - Tools",
-    description: "Demonstrate picking up, using, and placing down common tools like hammers, screwdrivers, and wrenches.",
-    reward: 3.0,
-    videosNeeded: 300,
-    videosSubmitted: 156,
-    category: "Manufacturing",
-    difficulty: "Medium",
-    duration: "3-5 min",
-    requirements: ["Multiple angles", "Clear hand visibility", "Various tools"],
-  },
-  {
-    id: "3",
-    title: "Grocery Shopping Navigation",
-    description: "Record your path through a grocery store, including selecting items, reading labels, and checkout process.",
-    reward: 4.0,
-    videosNeeded: 200,
-    videosSubmitted: 89,
-    category: "Retail",
-    difficulty: "Medium",
-    duration: "5-10 min",
-    requirements: ["Store permission", "Face privacy", "Clear audio"],
-  },
-  {
-    id: "4",
-    title: "Folding Laundry",
-    description: "Demonstrate folding various types of clothing items including shirts, pants, towels, and sheets.",
-    reward: 2.0,
-    videosNeeded: 400,
-    videosSubmitted: 298,
-    category: "Household",
-    difficulty: "Easy",
-    duration: "2-4 min",
-    requirements: ["Clear hand movements", "Different clothing types", "Good lighting"],
-  },
-  {
-    id: "5",
-    title: "Door Opening Scenarios",
-    description: "Record opening different types of doors: sliding, push, pull, automatic, with handles, knobs, etc.",
-    reward: 1.5,
-    videosNeeded: 600,
-    videosSubmitted: 445,
-    category: "Navigation",
-    difficulty: "Easy",
-    duration: "1-2 min",
-    requirements: ["Various door types", "Clear mechanism visibility", "Multiple locations"],
-  },
-  {
-    id: "6",
-    title: "Food Preparation - Chopping",
-    description: "Demonstrate chopping various vegetables and fruits with different cutting techniques and knife types.",
-    reward: 3.5,
-    videosNeeded: 250,
-    videosSubmitted: 112,
-    category: "Culinary",
-    difficulty: "Hard",
-    duration: "4-6 min",
-    requirements: ["Safety precautions", "Multiple ingredients", "Clear hand/knife visibility"],
-  },
-]
+import { Navigation } from "@/components/navigation";
+import { BountyCard } from "@/components/bounty-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState, useEffect } from "react";
+
+interface Bounty {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  videosNeeded: number;
+  videosSubmitted: number;
+  category: string;
+  difficulty: string;
+  duration: string;
+  requirements: string[];
+}
 
 export default function BountiesPage() {
+  const [bounties, setBounties] = useState<Bounty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
+
+  useEffect(() => {
+    fetchBounties();
+  }, []);
+
+  const fetchBounties = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/bounties");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch bounties");
+      }
+
+      const data = await response.json();
+      setBounties(data.bounties || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAndSortedBounties = bounties
+    .filter((bounty) => {
+      const matchesSearch =
+        bounty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        bounty.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        categoryFilter === "all" ||
+        bounty.category.toLowerCase() === categoryFilter.toLowerCase();
+      const matchesDifficulty =
+        difficultyFilter === "all" ||
+        bounty.difficulty.toLowerCase() === difficultyFilter.toLowerCase();
+
+      return matchesSearch && matchesCategory && matchesDifficulty;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "reward-high":
+          return b.reward - a.reward;
+        case "reward-low":
+          return a.reward - b.reward;
+        case "popular":
+          return b.videosSubmitted - a.videosSubmitted;
+        case "newest":
+        default:
+          return 0; // Assuming server returns in newest order
+      }
+    });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-balance text-4xl font-bold lg:text-5xl">
+              Active Bounties
+            </h1>
+            <p className="mt-3 text-pretty text-muted-foreground lg:text-lg">
+              Browse available data collection tasks and start earning
+              cryptocurrency
+            </p>
+          </div>
+
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row">
+            <Input
+              placeholder="Search bounties..."
+              className="sm:max-w-xs"
+              disabled
+            />
+            <Select disabled>
+              <SelectTrigger className="sm:w-[180px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+            </Select>
+            <Select disabled>
+              <SelectTrigger className="sm:w-[180px]">
+                <SelectValue placeholder="Difficulty" />
+              </SelectTrigger>
+            </Select>
+            <Select disabled>
+              <SelectTrigger className="sm:w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+            </Select>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-64 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-balance text-4xl font-bold lg:text-5xl">
+              Active Bounties
+            </h1>
+          </div>
+
+          <div className="mx-auto max-w-md rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
+            <h3 className="text-lg font-semibold text-destructive">
+              Error Loading Bounties
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            <Button onClick={fetchBounties} className="mt-4">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <Navigation />
@@ -88,16 +165,24 @@ export default function BountiesPage() {
       <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-balance text-4xl font-bold lg:text-5xl">Active Bounties</h1>
+          <h1 className="text-balance text-4xl font-bold lg:text-5xl">
+            Active Bounties
+          </h1>
           <p className="mt-3 text-pretty text-muted-foreground lg:text-lg">
-            Browse available data collection tasks and start earning cryptocurrency
+            Browse available data collection tasks and start earning
+            cryptocurrency
           </p>
         </div>
 
         {/* Filters */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row">
-          <Input placeholder="Search bounties..." className="sm:max-w-xs" />
-          <Select>
+          <Input
+            placeholder="Search bounties..."
+            className="sm:max-w-xs"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="sm:w-[180px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -110,7 +195,7 @@ export default function BountiesPage() {
               <SelectItem value="culinary">Culinary</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
             <SelectTrigger className="sm:w-[180px]">
               <SelectValue placeholder="Difficulty" />
             </SelectTrigger>
@@ -121,7 +206,7 @@ export default function BountiesPage() {
               <SelectItem value="hard">Hard</SelectItem>
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="sm:w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
@@ -135,12 +220,21 @@ export default function BountiesPage() {
         </div>
 
         {/* Bounty Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {bounties.map((bounty) => (
-            <BountyCard key={bounty.id} bounty={bounty} />
-          ))}
-        </div>
+        {filteredAndSortedBounties.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold">No bounties found</h3>
+            <p className="mt-2 text-muted-foreground">
+              Try adjusting your filters or search terms
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredAndSortedBounties.map((bounty) => (
+              <BountyCard key={bounty.id} bounty={bounty} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,43 +1,53 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Navigation } from "@/components/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useWallet } from "@solana/wallet-adapter-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useState } from "react";
+import { Navigation } from "@/components/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useWallet } from "@solana/wallet-adapter-react";
+import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
 
 export default function SubmitVideoPage() {
-  const { connected } = useWallet()
-  const router = useRouter()
-  const [uploading, setUploading] = useState(false)
-  const [videoFile, setVideoFile] = useState<File | null>(null)
-  const [notes, setNotes] = useState("")
+  const { connected } = useWallet();
+  const router = useRouter();
+  const params = useParams();
+  const bountyId = params.id as string;
+  const [uploading, setUploading] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [notes, setNotes] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!connected) {
-      alert("Please connect your wallet first")
-      return
+      alert("Please connect your wallet first");
+      return;
     }
     if (!videoFile) {
-      alert("Please select a video file")
-      return
+      alert("Please select a video file");
+      return;
     }
 
-    setUploading(true)
+    setUploading(true);
     // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setUploading(false)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setUploading(false);
 
-    alert("Video submitted successfully! You'll receive payment once it's reviewed.")
-    router.push("/dashboard")
-  }
+    alert(
+      "Video submitted successfully! You'll receive payment once it's reviewed.",
+    );
+    router.push("/dashboard");
+  };
 
   return (
     <div className="min-h-screen">
@@ -47,16 +57,28 @@ export default function SubmitVideoPage() {
         <div className="mx-auto max-w-2xl">
           {/* Back Button */}
           <Button variant="ghost" asChild className="mb-6">
-            <Link href="/bounties/1">
-              <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <Link href={`/bounties/${bountyId}`}>
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
               Back to Bounty
             </Link>
           </Button>
 
           <div className="mb-8">
-            <h1 className="text-balance text-4xl font-bold">Submit Your Video</h1>
+            <h1 className="text-balance text-4xl font-bold">
+              Submit Your Video
+            </h1>
             <p className="mt-3 text-pretty text-muted-foreground">
               Upload your video for the Kitchen Cleaning Tasks bounty
             </p>
@@ -66,7 +88,8 @@ export default function SubmitVideoPage() {
             <Card className="mb-6 border-destructive/50 bg-destructive/10">
               <CardContent className="pt-6">
                 <p className="text-sm text-foreground">
-                  Please connect your Solana wallet to submit videos and receive payments.
+                  Please connect your Solana wallet to submit videos and receive
+                  payments.
                 </p>
               </CardContent>
             </Card>
@@ -77,7 +100,8 @@ export default function SubmitVideoPage() {
               <CardHeader>
                 <CardTitle>Video Upload</CardTitle>
                 <CardDescription>
-                  Ensure your video meets all the requirements listed in the bounty details
+                  Ensure your video meets all the requirements listed in the
+                  bounty details
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -89,16 +113,21 @@ export default function SubmitVideoPage() {
                       id="video"
                       type="file"
                       accept="video/*"
-                      onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                      onChange={(e) =>
+                        setVideoFile(e.target.files?.[0] || null)
+                      }
                       className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
                     />
                     {videoFile && (
                       <p className="text-sm text-muted-foreground">
-                        Selected: {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
+                        Selected: {videoFile.name} (
+                        {(videoFile.size / 1024 / 1024).toFixed(2)} MB)
                       </p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">Accepted formats: MP4, MOV, AVI. Max size: 500MB</p>
+                  <p className="text-xs text-muted-foreground">
+                    Accepted formats: MP4, MOV, AVI. Max size: 500MB
+                  </p>
                 </div>
 
                 {/* Notes */}
@@ -115,7 +144,9 @@ export default function SubmitVideoPage() {
 
                 {/* Checklist */}
                 <div className="space-y-3 rounded-lg border border-border/50 bg-muted/30 p-4">
-                  <p className="text-sm font-medium">Before submitting, verify:</p>
+                  <p className="text-sm font-medium">
+                    Before submitting, verify:
+                  </p>
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" className="rounded" required />
@@ -131,19 +162,26 @@ export default function SubmitVideoPage() {
                     </label>
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" className="rounded" required />
-                      <span>No personal or sensitive information is visible</span>
+                      <span>
+                        No personal or sensitive information is visible
+                      </span>
                     </label>
                   </div>
                 </div>
 
                 {/* Submit Button */}
-                <Button type="submit" className="w-full" size="lg" disabled={!connected || uploading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={!connected || uploading}
+                >
                   {uploading ? "Uploading..." : "Submit Video"}
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">
-                  Your video will be reviewed within 24-48 hours. Payment will be sent to your wallet automatically upon
-                  approval.
+                  Your video will be reviewed within 24-48 hours. Payment will
+                  be sent to your wallet automatically upon approval.
                 </p>
               </CardContent>
             </Card>
@@ -151,5 +189,5 @@ export default function SubmitVideoPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

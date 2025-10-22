@@ -12,24 +12,26 @@ import { useParams } from "next/navigation";
 
 interface Bounty {
   id: string;
+  creator_id: string;
   title: string;
   description: string;
-  reward: number;
-  videos_needed: number;
-  videos_submitted: number;
   category: string;
   difficulty: string;
-  duration: string;
+  reward_amount: number;
+  reward_token: string;
+  total_slots: number;
+  filled_slots: number;
   requirements: string[];
-  guidelines?: string[];
-  examples?: string[];
-  creator_id: string;
+  guidelines: string | null;
+  example_video_url: string | null;
+  status: string;
+  deadline: string | null;
+  created_at: string;
+  updated_at: string;
   profiles?: {
     display_name: string;
-    avatar_url?: string;
+    avatar_url: string | null;
   };
-  posted_date?: string;
-  expiry_date?: string;
 }
 
 export default function BountyDetailPage() {
@@ -136,7 +138,7 @@ export default function BountyDetailPage() {
     );
   }
 
-  const progress = (bounty.videos_submitted / bounty.videos_needed) * 100;
+  const progress = (bounty.filled_slots / bounty.total_slots) * 100;
 
   return (
     <div className="min-h-screen">
@@ -171,14 +173,15 @@ export default function BountyDetailPage() {
               <Badge
                 variant="outline"
                 className={
-                  bounty.difficulty === "Easy"
+                  bounty.difficulty === "easy"
                     ? "border-secondary/50 text-secondary"
-                    : bounty.difficulty === "Medium"
+                    : bounty.difficulty === "medium"
                       ? "border-primary/50 text-primary"
                       : "border-destructive/50 text-destructive"
                 }
               >
-                {bounty.difficulty}
+                {bounty.difficulty.charAt(0).toUpperCase() +
+                  bounty.difficulty.slice(1)}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 Posted by {bounty.profiles?.display_name || "Anonymous"}
@@ -198,17 +201,17 @@ export default function BountyDetailPage() {
               <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
                 <div className="text-center sm:text-left">
                   <div className="text-5xl font-bold text-primary">
-                    ${bounty.reward}
+                    {bounty.reward_amount} {bounty.reward_token}
                   </div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    per accepted video
+                    total reward
                   </div>
                 </div>
                 <div className="flex-1">
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="font-medium">
-                      {bounty.videos_submitted} / {bounty.videos_needed} videos
+                      {bounty.filled_slots} / {bounty.total_slots} slots
                     </span>
                   </div>
                   <Progress value={progress} className="h-3" />
@@ -252,43 +255,34 @@ export default function BountyDetailPage() {
           </Card>
 
           {/* Guidelines */}
-          {bounty.guidelines && bounty.guidelines.length > 0 && (
+          {bounty.guidelines && (
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Recording Guidelines</CardTitle>
               </CardHeader>
               <CardContent>
-                <ol className="space-y-3">
-                  {bounty.guidelines.map((guideline, index) => (
-                    <li key={index} className="flex gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/20 text-xs font-semibold text-secondary">
-                        {index + 1}
-                      </span>
-                      <span className="text-sm leading-relaxed">
-                        {guideline}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {bounty.guidelines}
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Examples */}
-          {bounty.examples && bounty.examples.length > 0 && (
+          {/* Example Video */}
+          {bounty.example_video_url && (
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Example Tasks</CardTitle>
+                <CardTitle>Example Video</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
-                  {bounty.examples.map((example, index) => (
-                    <li key={index} className="flex gap-3 text-sm">
-                      <span className="text-muted-foreground">•</span>
-                      <span>{example}</span>
-                    </li>
-                  ))}
-                </ul>
+                <a
+                  href={bounty.example_video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline"
+                >
+                  View example video
+                </a>
               </CardContent>
             </Card>
           )}
@@ -300,29 +294,18 @@ export default function BountyDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Duration per video
+                <span className="text-muted-foreground">Created</span>
+                <span className="font-medium">
+                  {new Date(bounty.created_at).toLocaleDateString()}
                 </span>
-                <span className="font-medium">{bounty.duration}</span>
               </div>
               <Separator />
-              {bounty.posted_date && (
+              {bounty.deadline && (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Posted date</span>
+                    <span className="text-muted-foreground">Deadline</span>
                     <span className="font-medium">
-                      {new Date(bounty.posted_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <Separator />
-                </>
-              )}
-              {bounty.expiry_date && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Expires</span>
-                    <span className="font-medium">
-                      {new Date(bounty.expiry_date).toLocaleDateString()}
+                      {new Date(bounty.deadline).toLocaleDateString()}
                     </span>
                   </div>
                   <Separator />

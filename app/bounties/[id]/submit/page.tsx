@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,23 +14,65 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { ensureUserProfileClient } from "@/lib/auth/client";
+
+interface UserProfile {
+  id: string;
+  display_name: string;
+  bio?: string;
+  avatar_url?: string;
+  wallet_address?: string;
+  location?: string;
+  role?: string;
+  total_earnings?: number;
+  total_submissions?: number;
+  reputation_score?: number;
+}
 
 export default function SubmitVideoPage() {
-  const { connected } = useWallet();
   const router = useRouter();
   const params = useParams();
   const bountyId = params.id as string;
   const [uploading, setUploading] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    checkProfile();
+  }, []);
+
+  const checkProfile = async () => {
+    // Check if user is authenticated
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.push("/auth/login");
+      return;
+    }
+
+    // Ensure profile exists and get wallet info
+    const profileResult = await ensureUserProfileClient();
+    if (!profileResult.success) {
+      setLoading(false);
+      return;
+    }
+
+    setProfile(profileResult.profile || null);
+    setLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!connected) {
-      alert("Please connect your wallet first");
+    if (!profile?.wallet_address) {
+      alert("Please link your wallet in your profile first");
       return;
     }
     if (!videoFile) {
@@ -84,12 +126,15 @@ export default function SubmitVideoPage() {
             </p>
           </div>
 
-          {!connected && (
+          {!loading && !profile?.wallet_address && (
             <Card className="mb-6 border-destructive/50 bg-destructive/10">
               <CardContent className="pt-6">
                 <p className="text-sm text-foreground">
-                  Please connect your Solana wallet to submit videos and receive
-                  payments.
+                  Please link your Solana wallet in your profile to submit
+                  videos and receive payments.{" "}
+                  <Link href="/profile" className="text-primary underline">
+                    Go to Profile
+                  </Link>
                 </p>
               </CardContent>
             </Card>
@@ -174,9 +219,13 @@ export default function SubmitVideoPage() {
                   type="submit"
                   className="w-full"
                   size="lg"
-                  disabled={!connected || uploading}
+                  disabled={!profile?.wallet_address || uploading || loading}
                 >
-                  {uploading ? "Uploading..." : "Submit Video"}
+                  {uploading
+                    ? "Uploading..."
+                    : loading
+                      ? "Loading..."
+                      : "Submit Video"}
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">

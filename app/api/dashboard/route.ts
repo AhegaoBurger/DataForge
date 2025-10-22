@@ -16,7 +16,7 @@ export async function GET() {
     // Get user's submission statistics
     const { data: submissions, error: submissionsError } = await supabase
       .from("submissions")
-      .select("*, bounties(reward)")
+      .select("*, bounties(title, reward_amount)")
       .eq("contributor_id", user.id);
 
     if (submissionsError) {
@@ -36,7 +36,7 @@ export async function GET() {
     const totalEarned =
       submissions?.reduce((sum, submission) => {
         return submission.status === "approved"
-          ? sum + (submission.bounties?.reward || 0)
+          ? sum + (submission.bounties?.reward_amount || 0)
           : sum;
       }, 0) || 0;
 
@@ -101,7 +101,7 @@ export async function GET() {
         status: submission.status,
         reward:
           submission.status === "approved"
-            ? submission.bounties?.reward || 0
+            ? submission.bounties?.reward_amount || 0
             : 0,
         reason: submission.rejection_reason || null,
       })) || [];
@@ -121,7 +121,7 @@ export async function GET() {
     if (bountyIds.length > 0) {
       const { data: bountiesData, error: bountiesError } = await supabase
         .from("bounties")
-        .select("id, title, reward, videos_needed, videos_submitted")
+        .select("id, title, reward_amount, total_slots, filled_slots")
         .in("id", bountyIds)
         .eq("status", "active");
 
@@ -132,9 +132,9 @@ export async function GET() {
           return {
             id: bounty.id,
             title: bounty.title,
-            reward: bounty.reward,
+            reward: bounty.reward_amount,
             progress: Math.round(
-              (bounty.videos_submitted / bounty.videos_needed) * 100,
+              (bounty.filled_slots / bounty.total_slots) * 100,
             ),
             yourSubmissions: userSubmissions.length,
           };

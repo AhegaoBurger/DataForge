@@ -149,9 +149,6 @@ export function Navigation() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Button asChild className="hidden sm:inline-flex">
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

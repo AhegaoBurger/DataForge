@@ -1,8 +1,8 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Navigation } from "@/components/navigation"
-import { StatsTicker } from "@/components/stats-ticker"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Navigation } from "@/components/navigation";
+import { StatsTicker } from "@/components/stats-ticker";
 
 export default function HomePage() {
   return (
@@ -16,17 +16,24 @@ export default function HomePage() {
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-balance text-5xl font-bold tracking-tight lg:text-7xl">
-              Turn Your Phone Into a <span className="text-primary">Data Collection</span> Device
+              Turn Your Phone Into a{" "}
+              <span className="text-primary">Data Collection</span> Device
             </h1>
             <p className="mt-6 text-pretty text-lg text-muted-foreground lg:text-xl">
-              Earn cryptocurrency by capturing videos of everyday tasks. Robotics companies get diverse, real-world
-              training data. Built on Solana for transparent, decentralized ownership.
+              Earn cryptocurrency by capturing videos of everyday tasks.
+              Robotics companies get diverse, real-world training data. Built on
+              Solana for transparent, decentralized ownership.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" asChild className="min-w-[200px]">
                 <Link href="/dashboard">Start Earning</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="min-w-[200px] bg-transparent">
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="min-w-[200px] bg-transparent"
+              >
                 <Link href="/for-buyers">Post a Bounty</Link>
               </Button>
             </div>
@@ -42,7 +49,9 @@ export default function HomePage() {
       <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-bold lg:text-5xl">How It Works</h2>
+            <h2 className="text-balance text-3xl font-bold lg:text-5xl">
+              How It Works
+            </h2>
             <p className="mt-4 text-pretty text-muted-foreground lg:text-lg">
               Three simple steps to start earning with your smartphone
             </p>
@@ -52,7 +61,12 @@ export default function HomePage() {
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="pt-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -63,8 +77,9 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 text-xl font-semibold">1. Record</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Browse available bounties and record videos of everyday tasks using your smartphone. Follow simple
-                  guidelines for each bounty.
+                  Browse available bounties and record videos of everyday tasks
+                  using your smartphone. Follow simple guidelines for each
+                  bounty.
                 </p>
               </CardContent>
             </Card>
@@ -72,7 +87,12 @@ export default function HomePage() {
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="pt-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -83,8 +103,8 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 text-xl font-semibold">2. Submit</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Upload your videos to the decentralized network. Our AI validates quality and compliance with bounty
-                  requirements.
+                  Upload your videos to the decentralized network. Our AI
+                  validates quality and compliance with bounty requirements.
                 </p>
               </CardContent>
             </Card>
@@ -92,7 +112,12 @@ export default function HomePage() {
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardContent className="pt-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -103,8 +128,9 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 text-xl font-semibold">3. Earn</h3>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Get paid instantly in cryptocurrency once your video is accepted. Earn $1-2 per video with
-                  transparent, on-chain payments.
+                  Get paid instantly in cryptocurrency once your video is
+                  accepted. Earn $1-2 per video with transparent, on-chain
+                  payments.
                 </p>
               </CardContent>
             </Card>
@@ -121,10 +147,12 @@ export default function HomePage() {
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
                 For Contributors
               </div>
-              <h2 className="mt-6 text-balance text-3xl font-bold lg:text-4xl">Monetize Your Daily Activities</h2>
+              <h2 className="mt-6 text-balance text-3xl font-bold lg:text-4xl">
+                Monetize Your Daily Activities
+              </h2>
               <p className="mt-4 text-pretty text-muted-foreground leading-relaxed">
-                Your everyday actions have value. Turn routine tasks into income by contributing to the future of
-                robotics and AI.
+                Your everyday actions have value. Turn routine tasks into income
+                by contributing to the future of robotics and AI.
               </p>
               <ul className="mt-8 space-y-4">
                 <li className="flex gap-3">
@@ -134,11 +162,18 @@ export default function HomePage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Earn $1-2 per video</strong> with instant cryptocurrency
-                    payments
+                    <strong className="text-foreground">
+                      Earn $1-2 per video
+                    </strong>{" "}
+                    with instant cryptocurrency payments
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -148,10 +183,16 @@ export default function HomePage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Flexible work</strong> - contribute anytime, anywhere
+                    <strong className="text-foreground">Flexible work</strong> -
+                    contribute anytime, anywhere
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -161,10 +202,16 @@ export default function HomePage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Own your data</strong> with transparent blockchain licensing
+                    <strong className="text-foreground">Own your data</strong>{" "}
+                    with transparent blockchain licensing
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -174,10 +221,18 @@ export default function HomePage() {
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">No special equipment</strong> - just your smartphone
+                    <strong className="text-foreground">
+                      No special equipment
+                    </strong>{" "}
+                    - just your smartphone
                   </span>
                 </li>
               </ul>
@@ -195,40 +250,90 @@ export default function HomePage() {
                 Access Diverse Training Data at Scale
               </h2>
               <p className="mt-4 text-pretty text-muted-foreground leading-relaxed">
-                Get high-quality, diverse datasets without building collection infrastructure. Focus on building better
-                robots.
+                Get high-quality, diverse datasets without building collection
+                infrastructure. Focus on building better robots.
               </p>
               <ul className="mt-8 space-y-4">
                 <li className="flex gap-3">
-                  <svg className="h-6 w-6 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="h-6 w-6 shrink-0 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Global diversity</strong> - data from contributors worldwide
+                    <strong className="text-foreground">
+                      Global diversity
+                    </strong>{" "}
+                    - data from contributors worldwide
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <svg className="h-6 w-6 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="h-6 w-6 shrink-0 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Transparent licensing</strong> - clear on-chain ownership
+                    <strong className="text-foreground">
+                      Transparent licensing
+                    </strong>{" "}
+                    - clear on-chain ownership
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <svg className="h-6 w-6 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="h-6 w-6 shrink-0 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Custom bounties</strong> - specify exactly what you need
+                    <strong className="text-foreground">Custom bounties</strong>{" "}
+                    - specify exactly what you need
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <svg className="h-6 w-6 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="h-6 w-6 shrink-0 text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm leading-relaxed">
-                    <strong className="text-foreground">Quality guaranteed</strong> - AI-validated submissions
+                    <strong className="text-foreground">
+                      Quality guaranteed
+                    </strong>{" "}
+                    - AI-validated submissions
                   </span>
                 </li>
               </ul>
@@ -245,10 +350,12 @@ export default function HomePage() {
         <div className="container mx-auto px-4 lg:px-8">
           <Card className="border-primary/20 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
             <CardContent className="p-12 text-center lg:p-16">
-              <h2 className="text-balance text-3xl font-bold lg:text-4xl">Ready to Get Started?</h2>
+              <h2 className="text-balance text-3xl font-bold lg:text-4xl">
+                Ready to Get Started?
+              </h2>
               <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted-foreground lg:text-lg">
-                Join thousands of contributors earning cryptocurrency or post your first bounty to access diverse
-                training data.
+                Join thousands of contributors earning cryptocurrency or post
+                your first bounty to access diverse training data.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button size="lg" asChild>
@@ -287,7 +394,8 @@ export default function HomePage() {
                 <span className="text-lg font-bold">DataVault</span>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                Decentralized marketplace for robotics training data. Built on Solana.
+                Decentralized marketplace for robotics training data. Built on
+                Solana.
               </p>
             </div>
 
@@ -295,7 +403,10 @@ export default function HomePage() {
               <h3 className="font-semibold">Product</h3>
               <ul className="mt-4 space-y-2 text-sm">
                 <li>
-                  <Link href="/how-it-works" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="/how-it-works"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     How It Works
                   </Link>
                 </li>
@@ -308,7 +419,10 @@ export default function HomePage() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/for-buyers" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="/for-buyers"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     For Buyers
                   </Link>
                 </li>
@@ -319,17 +433,26 @@ export default function HomePage() {
               <h3 className="font-semibold">Resources</h3>
               <ul className="mt-4 space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     Documentation
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     API Reference
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     Community
                   </Link>
                 </li>
@@ -340,17 +463,26 @@ export default function HomePage() {
               <h3 className="font-semibold">Legal</h3>
               <ul className="mt-4 space-y-2 text-sm">
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     Privacy Policy
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     Terms of Service
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                  <Link
+                    href="#"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
                     Licensing
                   </Link>
                 </li>
@@ -364,5 +496,5 @@ export default function HomePage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }

@@ -41,13 +41,44 @@ export async function GET() {
       }, 0) || 0;
 
     // Get user profile data
-    const { data: profile, error: profileError } = await supabase
+    let profile, profileError;
+    ({ data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("display_name, avatar_url, created_at")
       .eq("id", user.id)
-      .single();
+      .single());
 
-    if (profileError && profileError.code !== "PGRST116") {
+    // If profile doesn't exist, create it automatically
+    if (profileError && profileError.code === "PGRST116") {
+      console.log("Profile not found, creating one for user:", user.id);
+
+      const displayName =
+        user.user_metadata?.display_name ||
+        user.user_metadata?.name ||
+        "Anonymous User";
+
+      const { data: newProfile, error: createError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          display_name: displayName,
+          wallet_address: user.user_metadata?.wallet_address || null,
+        })
+        .select("display_name, avatar_url, created_at")
+        .single();
+
+      if (createError) {
+        console.error("Failed to create profile:", createError);
+        return NextResponse.json(
+          { error: `Failed to create profile: ${createError.message}` },
+          { status: 500 },
+        );
+      }
+
+      profile = newProfile;
+      profileError = null;
+      console.log("Profile created successfully for user:", user.id);
+    } else if (profileError) {
       return NextResponse.json(
         { error: profileError.message },
         { status: 500 },

@@ -4,7 +4,7 @@
 -- Note: In production, these would be created by authenticated users
 -- This is just sample data to demonstrate the structure
 INSERT INTO public.bounties (id, creator_id, title, description, category, difficulty, reward_amount, total_slots, requirements, guidelines, status)
-VALUES 
+VALUES
   (
     '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000000', -- Placeholder, will be replaced

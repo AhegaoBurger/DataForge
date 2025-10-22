@@ -6,9 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  ensureUserProfileClient,
+  getUserProfile,
+  debugAuthStatus,
+} from "@/lib/auth/client";
 
 interface UserData {
   videosSubmitted: number;
@@ -38,7 +43,6 @@ interface ActiveBounty {
 }
 
 export default function DashboardPage() {
-  const { connected } = useWallet();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [recentSubmissions, setRecentSubmissions] = useState<
     RecentSubmission[]
@@ -46,12 +50,58 @@ export default function DashboardPage() {
   const [activeBounties, setActiveBounties] = useState<ActiveBounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const supabase = createClient();
 
   useEffect(() => {
-    if (connected) {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    setLoading(true);
+    setProfileError(null);
+
+    try {
+      // Check if user is authenticated
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      setUser(session.user);
+
+      // First ensure user has a profile
+      const profileResult = await ensureUserProfileClient();
+
+      if (!profileResult.success) {
+        setProfileError(profileResult.error || "Failed to create profile");
+        setLoading(false);
+        return;
+      }
+
+      setProfile(profileResult.profile);
+      setIsAuthenticated(true);
+      fetchDashboardData();
+    } catch (error) {
+      console.error("Auth check error:", error);
+      setProfileError("Authentication failed");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
       fetchDashboardData();
     }
-  }, [connected]);
+  }, [isAuthenticated]);
 
   const fetchDashboardData = async () => {
     try {
@@ -60,7 +110,7 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error("Please connect your wallet to view dashboard");
+          throw new Error("Please sign in to view your dashboard");
         }
         throw new Error("Failed to fetch dashboard data");
       }
@@ -76,7 +126,49 @@ export default function DashboardPage() {
     }
   };
 
-  if (!connected) {
+  // Add retry functionality for profile errors
+  const handleRetryProfile = async () => {
+    setProfileError(null);
+    await checkAuthStatus();
+  };
+
+  if (profileError) {
+    return (
+      <div className="min-h-screen">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-16 lg:px-8">
+          <Card className="mx-auto max-w-md border-destructive/50 bg-destructive/10">
+            <CardContent className="pt-6 text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-destructive"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+              <h2 className="mt-4 text-xl font-semibold">
+                Profile Setup Error
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {profileError}
+              </p>
+              <Button onClick={handleRetryProfile} className="mt-4">
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen">
         <Navigation />
@@ -96,11 +188,9 @@ export default function DashboardPage() {
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
-              <h2 className="mt-4 text-xl font-semibold">
-                Wallet Not Connected
-              </h2>
+              <h2 className="mt-4 text-xl font-semibold">Not Signed In</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Please connect your Solana wallet to access your dashboard
+                Please sign in to access your dashboard
               </p>
             </CardContent>
           </Card>

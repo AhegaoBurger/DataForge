@@ -50,5 +50,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Ensure user has a profile when accessing protected routes
+  if (user && isProtectedPath) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    // If profile doesn't exist, create it
+    if (!profile) {
+      const displayName =
+        user.user_metadata?.display_name ||
+        user.user_metadata?.name ||
+        `User ${user.id.slice(0, 8)}`;
+
+      await supabase.from("profiles").insert({
+        id: user.id,
+        display_name: displayName,
+        wallet_address: user.user_metadata?.wallet_address || null,
+      });
+    }
+  }
+
   return supabaseResponse;
 }

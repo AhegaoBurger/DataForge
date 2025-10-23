@@ -26,7 +26,6 @@ interface UserProfile {
   bio?: string;
   avatar_url?: string;
   wallet_address?: string;
-  location?: string;
   role?: string;
   total_earnings?: number;
   total_submissions?: number;
@@ -51,7 +50,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     display_name: "",
     bio: "",
-    location: "",
   });
 
   useEffect(() => {
@@ -63,7 +61,6 @@ export default function ProfilePage() {
       setFormData({
         display_name: profile.display_name || "",
         bio: profile.bio || "",
-        location: profile.location || "",
       });
     }
   }, [profile]);
@@ -103,7 +100,6 @@ export default function ProfilePage() {
       const result = await updateUserProfile({
         display_name: formData.display_name,
         bio: formData.bio,
-        location: formData.location,
       });
 
       if (result.success) {
@@ -430,19 +426,6 @@ export default function ProfilePage() {
                       disabled={!editing}
                       rows={4}
                       placeholder="Tell us about yourself..."
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      value={formData.location}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                      disabled={!editing}
-                      placeholder="City, Country"
                     />
                   </div>
 

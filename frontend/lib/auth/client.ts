@@ -6,7 +6,6 @@ export interface UserProfile {
   wallet_address?: string;
   bio?: string;
   avatar_url?: string;
-  location?: string;
   role?: string;
   total_earnings?: number;
   total_submissions?: number;

@@ -25,7 +25,6 @@ interface UserProfile {
   bio?: string;
   avatar_url?: string;
   wallet_address?: string;
-  location?: string;
   role?: string;
   total_earnings?: number;
   total_submissions?: number;

@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "Context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?enabledTools=%5B%22get_code_context_exa%22%2C%22web_search_exa%22%2C%22deep_researcher_start%22%2C%22deep_researcher_check%22%2C%22crawling_exa%22%5D",
+      "headers": {}
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--enable-web-dashboard",
+        "false",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "/Users/tenequm/Projects/x3000"
+      ],
+      "env": {}
+    }
+  }
+}

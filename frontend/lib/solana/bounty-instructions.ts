@@ -32,6 +32,21 @@ export async function createBountyOnChain(
   const program = getProgramWithWallet(connection, wallet);
   const [bountyPDA] = getBountyPDA(params.bountyId);
 
+  // Check if this bounty PDA already exists
+  try {
+    const existingAccount = await connection.getAccountInfo(bountyPDA);
+    if (existingAccount) {
+      throw new Error(
+        `Bounty with ID "${params.bountyId}" already exists. Please try again with a different ID.`
+      );
+    }
+  } catch (error: any) {
+    if (error.message?.includes("already exists")) {
+      throw error;
+    }
+    // Account doesn't exist, which is what we want
+  }
+
   const rewardPerVideoLamports = new BN(solToLamports(params.rewardPerVideo));
   const totalPoolLamports = new BN(solToLamports(params.totalPool));
   const expiresAtUnix = new BN(Math.floor(params.expiresAt.getTime() / 1000));

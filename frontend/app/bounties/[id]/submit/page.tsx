@@ -28,6 +28,7 @@ import {
   checkProfileExists,
 } from "@/lib/solana/profile-instructions";
 import { getExplorerUrl } from "@/lib/solana/utils";
+import { WalletButton } from "@/components/wallet-button";
 
 interface UserProfile {
   id: string;
@@ -69,6 +70,14 @@ export default function SubmitVideoPage() {
   useEffect(() => {
     // Check for on-chain profile when wallet is connected
     if (wallet.connected && wallet.publicKey && profile?.wallet_address) {
+      // Verify the connected wallet matches the profile wallet
+      if (wallet.publicKey.toString() !== profile.wallet_address) {
+        alert(
+          `Wallet mismatch! You connected ${wallet.publicKey.toString().substring(0, 8)}... but your profile has ${profile.wallet_address.substring(0, 8)}... linked. Please connect the correct wallet or update your profile.`
+        );
+        wallet.disconnect();
+        return;
+      }
       checkOnChainProfile();
     }
   }, [wallet.connected, wallet.publicKey, profile]);
@@ -156,6 +165,13 @@ export default function SubmitVideoPage() {
     }
     if (!profile?.wallet_address) {
       alert("Please link your wallet in your profile first");
+      return;
+    }
+    // Verify wallet match
+    if (wallet.publicKey.toString() !== profile.wallet_address) {
+      alert(
+        "The connected wallet doesn't match your profile wallet. Please connect the correct wallet or update your profile."
+      );
       return;
     }
     if (!hasOnChainProfile) {
@@ -317,6 +333,77 @@ export default function SubmitVideoPage() {
               Upload your video for the Kitchen Cleaning Tasks bounty
             </p>
           </div>
+
+          {/* Wallet Connection Card */}
+          {!loading && profile?.wallet_address && !wallet.connected && (
+            <Card className="mb-6 border-primary/50 bg-primary/10">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Connect Your Wallet
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Connect your Solana wallet to sign transactions and submit
+                      videos
+                    </p>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      Expected: {profile.wallet_address.substring(0, 12)}...
+                      {profile.wallet_address.substring(profile.wallet_address.length - 4)}
+                    </p>
+                  </div>
+                  <WalletButton />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Wrong Wallet Connected Warning */}
+          {!loading &&
+            profile?.wallet_address &&
+            wallet.connected &&
+            wallet.publicKey &&
+            wallet.publicKey.toString() !== profile.wallet_address && (
+              <Card className="mb-6 border-destructive/50 bg-destructive/10">
+                <CardContent className="pt-6">
+                  <p className="text-sm font-medium text-foreground mb-2">
+                    Wrong Wallet Connected
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    The connected wallet doesn't match your profile. Please
+                    disconnect and connect the correct wallet.
+                  </p>
+                  <div className="space-y-1 text-xs font-mono">
+                    <p className="text-muted-foreground">
+                      Connected:{" "}
+                      <span className="text-destructive">
+                        {wallet.publicKey.toString().substring(0, 12)}...
+                        {wallet.publicKey.toString().substring(wallet.publicKey.toString().length - 4)}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Expected:{" "}
+                      <span className="text-green-500">
+                        {profile.wallet_address.substring(0, 12)}...
+                        {profile.wallet_address.substring(profile.wallet_address.length - 4)}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      onClick={() => wallet.disconnect()}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      Disconnect Wallet
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/profile">Update Profile</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
           {!loading && !profile?.wallet_address && (
             <Card className="mb-6 border-destructive/50 bg-destructive/10">

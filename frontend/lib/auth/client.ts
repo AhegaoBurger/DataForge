@@ -151,17 +151,32 @@ export async function updateUserProfile(
       };
     }
 
-    const { data: profile, error: updateError } = await supabase
+    // First perform the update
+    const { error: updateError } = await supabase
       .from("profiles")
       .update(updates)
-      .eq("id", user.id)
-      .select()
-      .single();
+      .eq("id", user.id);
 
     if (updateError) {
+      console.error("Update error:", updateError);
       return {
         success: false,
         error: updateError.message,
+      };
+    }
+
+    // Then fetch the updated profile separately
+    const { data: profile, error: fetchError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (fetchError) {
+      console.error("Fetch error:", fetchError);
+      return {
+        success: false,
+        error: fetchError.message,
       };
     }
 

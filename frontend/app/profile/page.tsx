@@ -168,7 +168,7 @@ export default function ProfilePage() {
 
     try {
       const result = await updateUserProfile({
-        wallet_address: undefined,
+        wallet_address: null as any,
       });
 
       if (result.success) {

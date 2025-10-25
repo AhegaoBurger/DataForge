@@ -36,30 +36,47 @@ export async function createBountyOnChain(
   const totalPoolLamports = new BN(solToLamports(params.totalPool));
   const expiresAtUnix = new BN(Math.floor(params.expiresAt.getTime() / 1000));
 
-  const tx = await program.methods
-    .createBounty(
-      params.bountyId,
-      rewardPerVideoLamports,
-      totalPoolLamports,
-      params.videosTarget,
-      params.taskDescription,
-      params.minDurationSecs,
-      params.minResolution,
-      params.minFps,
-      expiresAtUnix
-    )
-    .accountsPartial({
-      bountyPool: bountyPDA,
-      authority: wallet.publicKey,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+  try {
+    const tx = await program.methods
+      .createBounty(
+        params.bountyId,
+        rewardPerVideoLamports,
+        totalPoolLamports,
+        params.videosTarget,
+        params.taskDescription,
+        params.minDurationSecs,
+        params.minResolution,
+        params.minFps,
+        expiresAtUnix
+      )
+      .accountsPartial({
+        bountyPool: bountyPDA,
+        authority: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
 
-  return {
-    signature: tx,
-    bountyPDA: bountyPDA.toString(),
-    bountyId: params.bountyId,
-  };
+    console.log("Transaction sent:", tx);
+
+    // Wait for confirmation
+    const latestBlockhash = await connection.getLatestBlockhash();
+    await connection.confirmTransaction({
+      signature: tx,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    });
+
+    console.log("Transaction confirmed:", tx);
+
+    return {
+      signature: tx,
+      bountyPDA: bountyPDA.toString(),
+      bountyId: params.bountyId,
+    };
+  } catch (error: any) {
+    console.error("Create bounty transaction failed:", error);
+    throw error;
+  }
 }
 
 /**

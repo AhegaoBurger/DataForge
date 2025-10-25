@@ -3,6 +3,7 @@ import { PROGRAM_ID } from "./program";
 
 /**
  * Derive the bounty pool PDA from bounty ID
+ * Note: bountyId must be <= 32 bytes (Solana PDA seed limit)
  */
 export function getBountyPDA(bountyId: string): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(

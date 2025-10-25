@@ -179,6 +179,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.9)
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
       vaul:
         specifier: ^0.9.9
         version: 0.9.9(@types/react-dom@19.0.0)(@types/react@19.0.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -198,6 +201,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.0.0
+      '@types/uuid':
+        specifier: ^11.0.0
+        version: 11.0.0
       postcss:
         specifier: ^8.5
         version: 8.5.0
@@ -2795,6 +2801,10 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
+  '@types/uuid@11.0.0':
+    resolution: {integrity: sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA==}
+    deprecated: This is a stub types definition. uuid provides its own type definitions, so you do not need this installed.
 
   '@types/uuid@8.3.4':
     resolution: {integrity: sha512-c/I8ZRb51j+pYGAu5CrFMRxqZ2ke4y2grEBO5AUjgSkSk+qT2Ea+OdWElz/OiMf5MNpn2b17kuVBwZLQJXzihw==}
@@ -5463,6 +5473,10 @@ packages:
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
+
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+    hasBin: true
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
@@ -9114,6 +9128,10 @@ snapshots:
 
   '@types/trusted-types@2.0.7': {}
 
+  '@types/uuid@11.0.0':
+    dependencies:
+      uuid: 13.0.0
+
   '@types/uuid@8.3.4': {}
 
   '@types/w3c-web-usb@1.0.13': {}
@@ -12462,6 +12480,8 @@ snapshots:
       which-typed-array: 1.1.19
 
   utils-merge@1.0.1: {}
+
+  uuid@13.0.0: {}
 
   uuid@8.3.2: {}
 

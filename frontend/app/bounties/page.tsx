@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { debugAuthStatus } from "@/lib/auth/client";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { createBountyOnChain } from "@/lib/solana/bounty-instructions";
+import { getExplorerUrl } from "@/lib/solana/utils";
+import { v4 as uuidv4 } from "uuid";
 
 interface Bounty {
   id: string;
@@ -41,6 +45,9 @@ interface Bounty {
 }
 
 export default function BountiesPage() {
+  const { connection } = useConnection();
+  const wallet = useWallet();
+
   const [bounties, setBounties] = useState<Bounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +61,8 @@ export default function BountiesPage() {
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [blockchainTxSignature, setBlockchainTxSignature] = useState<string | null>(null);
+  const [isBlockchainStep, setIsBlockchainStep] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -107,10 +116,20 @@ export default function BountiesPage() {
     e.preventDefault();
     setIsCreating(true);
     setCreateError(null);
+    setBlockchainTxSignature(null);
 
     // Check authentication
     if (!isAuthenticated) {
-      throw new Error("You must be signed in to create a bounty");
+      setCreateError("You must be signed in to create a bounty");
+      setIsCreating(false);
+      return;
+    }
+
+    // Check wallet connection
+    if (!wallet.connected || !wallet.publicKey) {
+      setCreateError("Please connect your wallet to create a blockchain-backed bounty");
+      setIsCreating(false);
+      return;
     }
 
     // Validate form data
@@ -161,6 +180,48 @@ export default function BountiesPage() {
         throw new Error("Deadline must be in the future");
       }
 
+      const rewardPerVideo = parseFloat(formData.reward_amount);
+      const totalSlots = parseInt(formData.total_slots);
+      const totalPool = rewardPerVideo * totalSlots;
+
+      // Check wallet balance
+      const balance = await connection.getBalance(wallet.publicKey);
+      const balanceInSol = balance / 1_000_000_000;
+      if (balanceInSol < totalPool + 0.01) {
+        throw new Error(
+          `Insufficient balance. You need at least ${totalPool.toFixed(2)} SOL + gas fees. Your balance: ${balanceInSol.toFixed(2)} SOL`
+        );
+      }
+
+      // STEP 1: Create bounty on blockchain
+      setIsBlockchainStep(true);
+      // Use timestamp + random chars for unique ID (max 32 bytes for PDA seed)
+      // Adding more randomness to prevent collisions
+      const bountyId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const expiresAt = formData.deadline
+        ? new Date(formData.deadline)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days default
+
+      console.log("Creating bounty with ID:", bountyId);
+
+      const blockchainResult = await createBountyOnChain(connection, wallet, {
+        bountyId,
+        rewardPerVideo,
+        totalPool,
+        videosTarget: totalSlots,
+        taskDescription: formData.description.trim(),
+        minDurationSecs: 30,
+        minResolution: "720p",
+        minFps: 30,
+        expiresAt,
+      });
+
+      console.log("Blockchain result:", blockchainResult);
+
+      setBlockchainTxSignature(blockchainResult.signature);
+      setIsBlockchainStep(false);
+
+      // STEP 2: Save to database with blockchain info
       const response = await fetch("/api/bounties", {
         method: "POST",
         headers: {
@@ -171,20 +232,33 @@ export default function BountiesPage() {
           description: formData.description.trim(),
           category: formData.category,
           difficulty: formData.difficulty,
-          reward_amount: parseFloat(formData.reward_amount),
-          total_slots: parseInt(formData.total_slots),
+          reward_amount: rewardPerVideo,
+          total_slots: totalSlots,
           requirements: parsedRequirements,
           guidelines: formData.guidelines.trim() || null,
           example_video_url: formData.example_video_url.trim() || null,
           deadline: formData.deadline
             ? new Date(formData.deadline).toISOString()
             : null,
+          // Blockchain fields
+          on_chain_pool_address: blockchainResult.bountyPDA,
+          blockchain_tx_signature: blockchainResult.signature,
+          is_blockchain_backed: true,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create bounty");
+        // Blockchain succeeded but DB failed - log for recovery
+        console.error("Database write failed but blockchain succeeded:", {
+          signature: blockchainResult.signature,
+          bountyPDA: blockchainResult.bountyPDA,
+          bountyId: blockchainResult.bountyId,
+        });
+        throw new Error(
+          errorData.error ||
+            "Failed to save bounty to database (blockchain transaction succeeded)"
+        );
       }
 
       // Reset form and close modal
@@ -201,17 +275,45 @@ export default function BountiesPage() {
         deadline: "",
       });
       setShowCreateForm(false);
-      setCreateSuccess("Bounty created successfully!");
+      setCreateSuccess(
+        `Bounty created successfully! ${totalPool.toFixed(2)} SOL locked in escrow.`
+      );
 
       // Refresh bounties list
       await fetchBounties();
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setCreateSuccess(null), 3000);
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "An error occurred");
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setCreateSuccess(null);
+        setBlockchainTxSignature(null);
+      }, 5000);
+    } catch (err: any) {
+      console.error("Bounty creation error:", err);
+      console.error("Error details:", {
+        message: err.message,
+        logs: err.logs,
+        signature: err.signature,
+      });
+
+      // Better error messages for common blockchain errors
+      let errorMessage = "An error occurred";
+      if (err.message?.includes("User rejected")) {
+        errorMessage = "Transaction was cancelled";
+      } else if (err.message?.includes("insufficient funds")) {
+        errorMessage = "Insufficient SOL balance for this transaction";
+      } else if (err.message?.includes("already been processed")) {
+        errorMessage =
+          "This bounty ID already exists. Please try again (a new ID will be generated).";
+      } else if (err.message?.includes("Simulation failed")) {
+        errorMessage = `Transaction simulation failed: ${err.message}. Check console for details.`;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setCreateError(errorMessage);
     } finally {
       setIsCreating(false);
+      setIsBlockchainStep(false);
     }
   };
 
@@ -373,8 +475,18 @@ export default function BountiesPage() {
               cryptocurrency
             </p>
             {createSuccess && (
-              <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-600 text-sm">
-                {createSuccess}
+              <div className="mt-3 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-sm">
+                <p className="text-green-600 font-medium">{createSuccess}</p>
+                {blockchainTxSignature && (
+                  <a
+                    href={getExplorerUrl(blockchainTxSignature, "devnet")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-xs mt-1 inline-block"
+                  >
+                    View transaction on Solana Explorer →
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -476,6 +588,48 @@ export default function BountiesPage() {
                 {createError && (
                   <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
                     {createError}
+                  </div>
+                )}
+
+                {isBlockchainStep && (
+                  <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-md text-blue-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>Creating bounty on blockchain... Please confirm the transaction in your wallet.</span>
+                    </div>
+                  </div>
+                )}
+
+                {blockchainTxSignature && !isBlockchainStep && (
+                  <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md text-green-600 text-sm">
+                    <p className="font-medium mb-1">Blockchain Transaction Successful!</p>
+                    <a
+                      href={getExplorerUrl(blockchainTxSignature, "devnet")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline text-xs"
+                    >
+                      View on Solana Explorer →
+                    </a>
                   </div>
                 )}
 
@@ -713,10 +867,16 @@ export default function BountiesPage() {
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             ></path>
                           </svg>
-                          Creating...
+                          {isBlockchainStep
+                            ? "Confirming on blockchain..."
+                            : "Saving..."}
                         </>
                       ) : (
-                        "Create Bounty"
+                        `Create Bounty ${
+                          formData.reward_amount && formData.total_slots
+                            ? `(Lock ${(parseFloat(formData.reward_amount) * parseInt(formData.total_slots)).toFixed(2)} SOL)`
+                            : ""
+                        }`
                       )}
                     </Button>
                     <Button

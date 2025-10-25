@@ -105,10 +105,9 @@ export default function SubmitVideoPage() {
       setUploadProgress(50);
       setUploadStatus("Processing...");
 
-      // 2. Get public URL for the uploaded video
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("videos").getPublicUrl(fileName);
+      // 2. Store just the file path (we'll generate URLs dynamically)
+      // This works better with private buckets and RLS policies
+      const videoPath = fileName;
 
       setUploadProgress(70);
       setUploadStatus("Creating submission...");
@@ -128,7 +127,7 @@ export default function SubmitVideoPage() {
         },
         body: JSON.stringify({
           bounty_id: bountyId,
-          video_url: publicUrl,
+          video_url: videoPath, // Store path instead of full URL
           metadata,
         }),
       });

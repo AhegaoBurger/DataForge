@@ -33,6 +33,7 @@ interface Submission {
     display_name: string;
     avatar_url: string | null;
   };
+  signedVideoUrl?: string; // Add this for the signed URL
 }
 
 export default function BountyReviewPage() {
@@ -96,7 +97,48 @@ export default function BountyReviewPage() {
         throw new Error("Failed to fetch submissions");
       }
       const data = await response.json();
-      setSubmissions(data.submissions || []);
+      const subs = data.submissions || [];
+
+      // Generate signed URLs for each submission
+      const subsWithUrls = await Promise.all(
+        subs.map(async (sub: Submission) => {
+          try {
+            // Extract just the file path from video_url
+            // It might be a full URL or just a path
+            let filePath = sub.video_url;
+
+            // If it's a full URL, extract the path after /videos/
+            if (filePath.includes('/storage/v1/object/')) {
+              const match = filePath.match(/\/videos\/(.+)$/);
+              if (match) {
+                filePath = match[1];
+              }
+            }
+
+            // Try to create a signed URL (valid for 1 hour)
+            const { data: signedData, error } = await supabase.storage
+              .from("videos")
+              .createSignedUrl(filePath, 3600);
+
+            if (error) {
+              console.error("Error creating signed URL:", error);
+              // Fallback to public URL if signed URL fails
+              const { data: publicData } = supabase.storage
+                .from("videos")
+                .getPublicUrl(filePath);
+              return { ...sub, signedVideoUrl: publicData.publicUrl };
+            }
+
+            return { ...sub, signedVideoUrl: signedData.signedUrl };
+          } catch (err) {
+            console.error("Error generating URL for video:", err);
+            // Last resort: use original URL
+            return { ...sub, signedVideoUrl: sub.video_url };
+          }
+        })
+      );
+
+      setSubmissions(subsWithUrls);
     } catch (err) {
       console.error("Error fetching submissions:", err);
     }
@@ -254,11 +296,17 @@ export default function BountyReviewPage() {
                       <div className="space-y-4">
                         {/* Video */}
                         <div>
-                          <video
-                            src={submission.video_url}
-                            controls
-                            className="w-full max-w-2xl rounded-lg border"
-                          />
+                          {submission.signedVideoUrl ? (
+                            <video
+                              src={submission.signedVideoUrl}
+                              controls
+                              className="w-full max-w-2xl rounded-lg border"
+                            />
+                          ) : (
+                            <div className="w-full max-w-2xl rounded-lg border p-8 text-center bg-muted">
+                              <p className="text-muted-foreground">Loading video...</p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Metadata */}
@@ -337,11 +385,17 @@ export default function BountyReviewPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        <video
-                          src={submission.video_url}
-                          controls
-                          className="w-full max-w-2xl rounded-lg border"
-                        />
+                        {submission.signedVideoUrl ? (
+                          <video
+                            src={submission.signedVideoUrl}
+                            controls
+                            className="w-full max-w-2xl rounded-lg border"
+                          />
+                        ) : (
+                          <div className="w-full max-w-2xl rounded-lg border p-8 text-center bg-muted">
+                            <p className="text-muted-foreground">Loading video...</p>
+                          </div>
+                        )}
                         <p className="text-sm text-muted-foreground">
                           Approved on{" "}
                           {new Date(submission.created_at).toLocaleString()}

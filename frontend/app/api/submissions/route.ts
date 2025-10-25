@@ -45,7 +45,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { bounty_id, video_url, metadata } = body
+  const {
+    bounty_id,
+    video_url,
+    metadata,
+    on_chain_submission_address,
+    escrow_tx_signature,
+  } = body
 
   // Validate required fields
   if (!bounty_id || !video_url) {
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
   // Check if bounty exists and is active
   const { data: bounty, error: bountyError } = await supabase
     .from("bounties")
-    .select("id, status, total_slots, filled_slots")
+    .select("id, status, total_slots, filled_slots, is_blockchain_backed")
     .eq("id", bounty_id)
     .single()
 
@@ -78,6 +84,19 @@ export async function POST(request: Request) {
       { error: "This bounty has reached its maximum submissions" },
       { status: 400 }
     )
+  }
+
+  // For blockchain-backed bounties, require blockchain fields
+  if (bounty.is_blockchain_backed) {
+    if (!on_chain_submission_address || !escrow_tx_signature) {
+      return NextResponse.json(
+        {
+          error:
+            "Blockchain-backed bounties require on_chain_submission_address and escrow_tx_signature",
+        },
+        { status: 400 }
+      )
+    }
   }
 
   // Check if user already submitted to this bounty
@@ -104,6 +123,8 @@ export async function POST(request: Request) {
       video_url,
       metadata: metadata || {},
       status: "pending",
+      on_chain_submission_address: on_chain_submission_address || null,
+      escrow_tx_signature: escrow_tx_signature || null,
     })
     .select()
     .single()

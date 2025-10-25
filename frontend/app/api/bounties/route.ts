@@ -30,11 +30,38 @@ export async function POST(request: Request) {
 
   const body = await request.json()
 
+  // Extract blockchain-related fields from the body
+  const {
+    on_chain_pool_address,
+    blockchain_tx_signature,
+    is_blockchain_backed,
+    ...bountyData
+  } = body
+
+  // Validate blockchain fields if provided
+  if (is_blockchain_backed) {
+    if (!on_chain_pool_address || !blockchain_tx_signature) {
+      return NextResponse.json(
+        {
+          error:
+            "Blockchain-backed bounties require on_chain_pool_address and blockchain_tx_signature",
+        },
+        { status: 400 }
+      )
+    }
+
+    // TODO: Optionally verify the transaction signature on-chain
+    // This would require a Solana connection and checking the transaction exists
+  }
+
   const { data: bounty, error } = await supabase
     .from("bounties")
     .insert({
       creator_id: user.id,
-      ...body,
+      ...bountyData,
+      on_chain_pool_address: on_chain_pool_address || null,
+      blockchain_tx_signature: blockchain_tx_signature || null,
+      is_blockchain_backed: is_blockchain_backed || false,
     })
     .select()
     .single()

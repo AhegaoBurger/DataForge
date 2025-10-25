@@ -17,13 +17,16 @@ export async function PUT(
   }
 
   const body = await request.json()
-  const { status } = body
+  const { status, payout_tx_signature } = body
 
   // Validate status
   const validStatuses = ["pending", "approved", "rejected", "revision_requested"]
   if (!status || !validStatuses.includes(status)) {
     return NextResponse.json(
-      { error: "Invalid status. Must be one of: pending, approved, rejected, revision_requested" },
+      {
+        error:
+          "Invalid status. Must be one of: pending, approved, rejected, revision_requested",
+      },
       { status: 400 }
     )
   }
@@ -31,7 +34,7 @@ export async function PUT(
   // Get submission details to check permissions
   const { data: submission, error: fetchError } = await supabase
     .from("submissions")
-    .select("*, bounties(creator_id, reward_amount)")
+    .select("*, bounties(creator_id, reward_amount, is_blockchain_backed)")
     .eq("id", id)
     .single()
 
@@ -47,10 +50,35 @@ export async function PUT(
     )
   }
 
+  // For blockchain-backed bounties with approval, require payout tx signature
+  if (
+    submission.bounties.is_blockchain_backed &&
+    status === "approved" &&
+    !payout_tx_signature
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Blockchain-backed submissions require payout_tx_signature when approving",
+      },
+      { status: 400 }
+    )
+  }
+
   // Update submission status
+  const updateData: any = {
+    status,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Add payout transaction signature if provided (for approvals)
+  if (payout_tx_signature) {
+    updateData.payout_tx_signature = payout_tx_signature
+  }
+
   const { data: updatedSubmission, error: updateError } = await supabase
     .from("submissions")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single()
@@ -61,6 +89,7 @@ export async function PUT(
 
   // Note: The trigger handle_submission_approval() will automatically
   // update the contributor's earnings when status changes to 'approved'
+  // For blockchain-backed bounties, the payment is already released on-chain
 
   return NextResponse.json({ submission: updatedSubmission })
 }

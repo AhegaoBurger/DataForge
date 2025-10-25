@@ -1,0 +1,1631 @@
+{
+  "address": "CJpjA6x7h3GZZzDnzFggjrV6JG7UVhsX5kCp7N95UDDG",
+  "metadata": {
+    "name": "unimake_backend",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "approve_submission",
+      "docs": [
+        "Approve a submission and release payment"
+      ],
+      "discriminator": [
+        154,
+        76,
+        116,
+        120,
+        143,
+        128,
+        16,
+        205
+      ],
+      "accounts": [
+        {
+          "name": "submission",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  117,
+                  98,
+                  109,
+                  105,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "submission.submission_id",
+                "account": "VideoSubmission"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "quality_score",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "award_badge",
+      "docs": [
+        "Award a badge to a contributor"
+      ],
+      "discriminator": [
+        163,
+        255,
+        101,
+        118,
+        140,
+        5,
+        179,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "contributor_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contributor_profile.wallet",
+                "account": "ContributorProfile"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "badge_type",
+          "type": {
+            "defined": {
+              "name": "BadgeType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_bounty",
+      "docs": [
+        "Cancel bounty and return remaining funds"
+      ],
+      "discriminator": [
+        79,
+        65,
+        107,
+        143,
+        128,
+        165,
+        135,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "complete_bounty",
+      "docs": [
+        "Complete a bounty"
+      ],
+      "discriminator": [
+        175,
+        126,
+        79,
+        116,
+        248,
+        106,
+        31,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_bounty",
+      "docs": [
+        "Create a new bounty with reward pool"
+      ],
+      "discriminator": [
+        122,
+        90,
+        14,
+        143,
+        8,
+        125,
+        200,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "bounty_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "bounty_id",
+          "type": "string"
+        },
+        {
+          "name": "reward_per_video",
+          "type": "u64"
+        },
+        {
+          "name": "total_pool",
+          "type": "u64"
+        },
+        {
+          "name": "videos_target",
+          "type": "u32"
+        },
+        {
+          "name": "task_description",
+          "type": "string"
+        },
+        {
+          "name": "min_duration_secs",
+          "type": "u32"
+        },
+        {
+          "name": "min_resolution",
+          "type": "string"
+        },
+        {
+          "name": "min_fps",
+          "type": "u32"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "create_dataset",
+      "docs": [
+        "Create a dataset NFT from approved submissions"
+      ],
+      "discriminator": [
+        63,
+        151,
+        84,
+        132,
+        246,
+        167,
+        216,
+        122
+      ],
+      "accounts": [
+        {
+          "name": "dataset_nft",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  116,
+                  97,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "dataset_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "dataset_id",
+          "type": "string"
+        },
+        {
+          "name": "license_type",
+          "type": {
+            "defined": {
+              "name": "LicenseType"
+            }
+          }
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "royalty_percentage",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initialize_profile",
+      "docs": [
+        "Initialize a contributor profile"
+      ],
+      "discriminator": [
+        32,
+        145,
+        77,
+        213,
+        58,
+        39,
+        251,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "contributor_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "pause_bounty",
+      "docs": [
+        "Pause an active bounty"
+      ],
+      "discriminator": [
+        56,
+        234,
+        91,
+        248,
+        106,
+        27,
+        11,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "purchase_dataset",
+      "docs": [
+        "Purchase a dataset NFT"
+      ],
+      "discriminator": [
+        161,
+        186,
+        174,
+        89,
+        98,
+        110,
+        251,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "dataset_nft",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  97,
+                  116,
+                  97,
+                  115,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "dataset_nft.dataset_id",
+                "account": "DatasetNFT"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reject_submission",
+      "docs": [
+        "Reject a submission and return funds to pool"
+      ],
+      "discriminator": [
+        2,
+        92,
+        1,
+        81,
+        148,
+        156,
+        6,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "submission",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  117,
+                  98,
+                  109,
+                  105,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "submission.submission_id",
+                "account": "VideoSubmission"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "resume_bounty",
+      "docs": [
+        "Resume a paused bounty"
+      ],
+      "discriminator": [
+        68,
+        219,
+        166,
+        132,
+        252,
+        198,
+        230,
+        195
+      ],
+      "accounts": [
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "bounty_pool"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "submit_video",
+      "docs": [
+        "Submit a video for review (creates escrow)"
+      ],
+      "discriminator": [
+        26,
+        133,
+        137,
+        221,
+        72,
+        208,
+        3,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "submission",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  117,
+                  98,
+                  109,
+                  105,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "submission_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bounty_pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  117,
+                  110,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "bounty_pool.bounty_id",
+                "account": "BountyPool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "submission_id",
+          "type": "string"
+        },
+        {
+          "name": "ipfs_hash",
+          "type": "string"
+        },
+        {
+          "name": "arweave_tx",
+          "type": "string"
+        },
+        {
+          "name": "metadata_uri",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BountyPool",
+      "discriminator": [
+        36,
+        23,
+        141,
+        200,
+        254,
+        71,
+        41,
+        171
+      ]
+    },
+    {
+      "name": "ContributorProfile",
+      "discriminator": [
+        244,
+        94,
+        163,
+        251,
+        64,
+        75,
+        111,
+        205
+      ]
+    },
+    {
+      "name": "DatasetNFT",
+      "discriminator": [
+        224,
+        7,
+        98,
+        45,
+        153,
+        220,
+        209,
+        66
+      ]
+    },
+    {
+      "name": "VideoSubmission",
+      "discriminator": [
+        4,
+        242,
+        17,
+        0,
+        39,
+        96,
+        206,
+        173
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BadgeAwarded",
+      "discriminator": [
+        153,
+        87,
+        158,
+        115,
+        220,
+        200,
+        52,
+        1
+      ]
+    },
+    {
+      "name": "BountyCreated",
+      "discriminator": [
+        68,
+        252,
+        247,
+        196,
+        154,
+        247,
+        130,
+        49
+      ]
+    },
+    {
+      "name": "BountyStatusChanged",
+      "discriminator": [
+        199,
+        99,
+        60,
+        166,
+        236,
+        196,
+        162,
+        59
+      ]
+    },
+    {
+      "name": "DatasetCreated",
+      "discriminator": [
+        86,
+        96,
+        11,
+        103,
+        98,
+        235,
+        251,
+        94
+      ]
+    },
+    {
+      "name": "DatasetPurchased",
+      "discriminator": [
+        57,
+        129,
+        122,
+        185,
+        77,
+        203,
+        69,
+        22
+      ]
+    },
+    {
+      "name": "ProfileCreated",
+      "discriminator": [
+        134,
+        233,
+        199,
+        153,
+        77,
+        206,
+        128,
+        94
+      ]
+    },
+    {
+      "name": "SubmissionApproved",
+      "discriminator": [
+        59,
+        102,
+        182,
+        29,
+        243,
+        202,
+        148,
+        164
+      ]
+    },
+    {
+      "name": "SubmissionRejected",
+      "discriminator": [
+        222,
+        120,
+        204,
+        232,
+        51,
+        196,
+        71,
+        146
+      ]
+    },
+    {
+      "name": "VideoSubmitted",
+      "discriminator": [
+        172,
+        54,
+        229,
+        242,
+        122,
+        121,
+        85,
+        103
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount provided"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidTarget",
+      "msg": "Invalid target count"
+    },
+    {
+      "code": 6002,
+      "name": "InsufficientPool",
+      "msg": "Insufficient pool funds"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidStatus",
+      "msg": "Invalid status for this operation"
+    },
+    {
+      "code": 6004,
+      "name": "BountyNotActive",
+      "msg": "Bounty is not active"
+    },
+    {
+      "code": 6005,
+      "name": "BountyFull",
+      "msg": "Bounty is full"
+    },
+    {
+      "code": 6006,
+      "name": "BountyExpired",
+      "msg": "Bounty has expired"
+    },
+    {
+      "code": 6007,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
+    },
+    {
+      "code": 6008,
+      "name": "BadgeAlreadyEarned",
+      "msg": "Badge already earned"
+    },
+    {
+      "code": 6009,
+      "name": "TooManyBadges",
+      "msg": "Too many badges"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidRoyalty",
+      "msg": "Invalid royalty percentage"
+    }
+  ],
+  "types": [
+    {
+      "name": "Badge",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "badge_type",
+            "type": {
+              "defined": {
+                "name": "BadgeType"
+              }
+            }
+          },
+          {
+            "name": "earned_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BadgeAwarded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "badge_type",
+            "type": {
+              "defined": {
+                "name": "BadgeType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BadgeType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FirstVideo"
+          },
+          {
+            "name": "HundredVideos"
+          },
+          {
+            "name": "ThousandVideos"
+          },
+          {
+            "name": "HighQuality"
+          },
+          {
+            "name": "EarlyAdopter"
+          },
+          {
+            "name": "CategoryExpert"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BountyCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bounty_id",
+            "type": "string"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_pool",
+            "type": "u64"
+          },
+          {
+            "name": "videos_target",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BountyPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "bounty_id",
+            "type": "string"
+          },
+          {
+            "name": "task_description",
+            "type": "string"
+          },
+          {
+            "name": "requirements",
+            "type": {
+              "defined": {
+                "name": "Requirements"
+              }
+            }
+          },
+          {
+            "name": "reward_per_video",
+            "type": "u64"
+          },
+          {
+            "name": "total_pool",
+            "type": "u64"
+          },
+          {
+            "name": "remaining_pool",
+            "type": "u64"
+          },
+          {
+            "name": "videos_target",
+            "type": "u32"
+          },
+          {
+            "name": "videos_collected",
+            "type": "u32"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "BountyStatus"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "expires_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BountyStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Paused"
+          },
+          {
+            "name": "Completed"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BountyStatusChanged",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bounty_id",
+            "type": "string"
+          },
+          {
+            "name": "new_status",
+            "type": {
+              "defined": {
+                "name": "BountyStatus"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContributorProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_submissions",
+            "type": "u32"
+          },
+          {
+            "name": "accepted_submissions",
+            "type": "u32"
+          },
+          {
+            "name": "rejected_submissions",
+            "type": "u32"
+          },
+          {
+            "name": "average_quality_score",
+            "type": "u8"
+          },
+          {
+            "name": "total_earnings",
+            "type": "u64"
+          },
+          {
+            "name": "reputation_score",
+            "type": "u16"
+          },
+          {
+            "name": "badges",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Badge"
+                }
+              }
+            }
+          },
+          {
+            "name": "join_date",
+            "type": "i64"
+          },
+          {
+            "name": "last_active",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DatasetCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dataset_id",
+            "type": "string"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DatasetNFT",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dataset_id",
+            "type": "string"
+          },
+          {
+            "name": "license_type",
+            "type": {
+              "defined": {
+                "name": "LicenseType"
+              }
+            }
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "royalty_percentage",
+            "type": "u8"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "total_sales",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DatasetPurchased",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dataset_id",
+            "type": "string"
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LicenseType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "SingleUse"
+          },
+          {
+            "name": "Unlimited"
+          },
+          {
+            "name": "Exclusive"
+          },
+          {
+            "name": "CommercialResale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProfileCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "reputation_score",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Requirements",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_duration_secs",
+            "type": "u32"
+          },
+          {
+            "name": "min_resolution",
+            "type": "string"
+          },
+          {
+            "name": "min_fps",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SubmissionApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "submission_id",
+            "type": "string"
+          },
+          {
+            "name": "contributor",
+            "type": "pubkey"
+          },
+          {
+            "name": "reward",
+            "type": "u64"
+          },
+          {
+            "name": "quality_score",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SubmissionRejected",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "submission_id",
+            "type": "string"
+          },
+          {
+            "name": "contributor",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SubmissionStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "UnderReview"
+          },
+          {
+            "name": "Approved"
+          },
+          {
+            "name": "Rejected"
+          },
+          {
+            "name": "Disputed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VideoSubmission",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "submission_id",
+            "type": "string"
+          },
+          {
+            "name": "contributor",
+            "type": "pubkey"
+          },
+          {
+            "name": "bounty_id",
+            "type": "string"
+          },
+          {
+            "name": "ipfs_hash",
+            "type": "string"
+          },
+          {
+            "name": "arweave_tx",
+            "type": "string"
+          },
+          {
+            "name": "metadata_uri",
+            "type": "string"
+          },
+          {
+            "name": "submission_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "SubmissionStatus"
+              }
+            }
+          },
+          {
+            "name": "escrow_amount",
+            "type": "u64"
+          },
+          {
+            "name": "quality_score",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VideoSubmitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "submission_id",
+            "type": "string"
+          },
+          {
+            "name": "bounty_id",
+            "type": "string"
+          },
+          {
+            "name": "contributor",
+            "type": "pubkey"
+          },
+          {
+            "name": "escrow_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

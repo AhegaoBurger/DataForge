@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface Bounty {
   id: string;
@@ -37,10 +38,12 @@ interface Bounty {
 export default function BountyDetailPage() {
   const params = useParams();
   const bountyId = params.id as string;
+  const supabase = createClient();
 
   const [bounty, setBounty] = useState<Bounty | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
     if (bountyId) {
@@ -62,6 +65,14 @@ export default function BountyDetailPage() {
 
       const data = await response.json();
       setBounty(data.bounty);
+
+      // Check if current user is the creator
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && data.bounty.creator_id === user.id) {
+        setIsCreator(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -216,11 +227,21 @@ export default function BountyDetailPage() {
                   </div>
                   <Progress value={progress} className="h-3" />
                 </div>
-                <Button size="lg" asChild>
-                  <Link href={`/bounties/${bounty.id}/submit`}>
-                    Submit Video
-                  </Link>
-                </Button>
+                <div className="flex gap-3">
+                  {isCreator ? (
+                    <Button size="lg" asChild variant="default">
+                      <Link href={`/bounties/${bounty.id}/review`}>
+                        Review Submissions
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="lg" asChild>
+                      <Link href={`/bounties/${bounty.id}/submit`}>
+                        Submit Video
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -321,16 +342,18 @@ export default function BountyDetailPage() {
           </Card>
 
           {/* CTA */}
-          <div className="mt-8 text-center">
-            <Button size="lg" asChild className="min-w-[200px]">
-              <Link href={`/bounties/${bounty.id}/submit`}>
-                Submit Your Video
-              </Link>
-            </Button>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Connect your wallet to submit and receive instant payment
-            </p>
-          </div>
+          {!isCreator && (
+            <div className="mt-8 text-center">
+              <Button size="lg" asChild className="min-w-[200px]">
+                <Link href={`/bounties/${bounty.id}/submit`}>
+                  Submit Your Video
+                </Link>
+              </Button>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Connect your wallet to submit and receive instant payment
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

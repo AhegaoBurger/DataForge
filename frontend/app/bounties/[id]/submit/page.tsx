@@ -36,6 +36,8 @@ export default function SubmitVideoPage() {
   const params = useParams();
   const bountyId = params.id as string;
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -80,14 +82,82 @@ export default function SubmitVideoPage() {
     }
 
     setUploading(true);
-    // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setUploading(false);
+    setUploadProgress(0);
+    setUploadStatus("Preparing upload...");
 
-    alert(
-      "Video submitted successfully! You'll receive payment once it's reviewed.",
-    );
-    router.push("/dashboard");
+    try {
+      // 1. Upload video to Supabase Storage
+      setUploadStatus("Uploading video...");
+      const fileExt = videoFile.name.split(".").pop();
+      const fileName = `${bountyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("videos")
+        .upload(fileName, videoFile, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      setUploadProgress(50);
+      setUploadStatus("Processing...");
+
+      // 2. Get public URL for the uploaded video
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("videos").getPublicUrl(fileName);
+
+      setUploadProgress(70);
+      setUploadStatus("Creating submission...");
+
+      // 3. Create submission record in database
+      const metadata = {
+        file_name: videoFile.name,
+        file_size: videoFile.size,
+        file_type: videoFile.type,
+        notes: notes || null,
+      };
+
+      const response = await fetch("/api/submissions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bounty_id: bountyId,
+          video_url: publicUrl,
+          metadata,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create submission");
+      }
+
+      const { submission } = await response.json();
+
+      setUploadProgress(100);
+      setUploadStatus("Complete!");
+
+      alert(
+        "Video submitted successfully! You'll receive payment once it's reviewed.",
+      );
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Submission error:", error);
+      setUploadStatus("");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit video. Please try again.",
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -212,6 +282,24 @@ export default function SubmitVideoPage() {
                     </label>
                   </div>
                 </div>
+
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {uploadStatus}
+                      </span>
+                      <span className="font-medium">{uploadProgress}%</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <Button

@@ -3,10 +3,10 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient()
-  const { id } = params
+  const { id } = await params
 
   const { data: bounty, error } = await supabase
     .from("bounties")
@@ -27,10 +27,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient()
-  const { id } = params
+  const { id } = await params
 
   const {
     data: { user },
@@ -73,10 +73,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient()
-  const { id } = params
+  const { id } = await params
 
   const {
     data: { user },

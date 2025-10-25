@@ -18,6 +18,16 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ensureUserProfileClient } from "@/lib/auth/client";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import {
+  submitVideoOnChain,
+  type SubmitVideoParams,
+} from "@/lib/solana/submission-instructions";
+import {
+  initializeProfileOnChain,
+  checkProfileExists,
+} from "@/lib/solana/profile-instructions";
+import { getExplorerUrl } from "@/lib/solana/utils";
 
 interface UserProfile {
   id: string;
@@ -42,11 +52,26 @@ export default function SubmitVideoPage() {
   const [notes, setNotes] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isBlockchainStep, setIsBlockchainStep] = useState(false);
+  const [blockchainTxSignature, setBlockchainTxSignature] = useState<
+    string | null
+  >(null);
+  const [hasOnChainProfile, setHasOnChainProfile] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(false);
   const supabase = createClient();
+  const { connection } = useConnection();
+  const wallet = useWallet();
 
   useEffect(() => {
     checkProfile();
   }, []);
+
+  useEffect(() => {
+    // Check for on-chain profile when wallet is connected
+    if (wallet.connected && wallet.publicKey && profile?.wallet_address) {
+      checkOnChainProfile();
+    }
+  }, [wallet.connected, wallet.publicKey, profile]);
 
   const checkProfile = async () => {
     // Check if user is authenticated
@@ -70,10 +95,73 @@ export default function SubmitVideoPage() {
     setLoading(false);
   };
 
+  const checkOnChainProfile = async () => {
+    if (!wallet.publicKey) return;
+
+    setCheckingProfile(true);
+    try {
+      const exists = await checkProfileExists(
+        connection,
+        wallet.publicKey.toString()
+      );
+      setHasOnChainProfile(exists);
+    } catch (error) {
+      console.error("Error checking on-chain profile:", error);
+    } finally {
+      setCheckingProfile(false);
+    }
+  };
+
+  const handleInitializeProfile = async () => {
+    if (!wallet.connected || !wallet.publicKey) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    setCheckingProfile(true);
+    try {
+      const result = await initializeProfileOnChain(connection, wallet);
+      console.log("Profile initialized:", result);
+
+      // Update database profile with on-chain address
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          on_chain_profile_address: result.profilePDA,
+        }),
+      });
+
+      setHasOnChainProfile(true);
+      alert(
+        "On-chain profile created successfully! You can now submit videos."
+      );
+    } catch (error: any) {
+      console.error("Profile initialization error:", error);
+      alert(
+        error?.message || "Failed to initialize profile. Please try again."
+      );
+    } finally {
+      setCheckingProfile(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation checks
+    if (!wallet.connected || !wallet.publicKey) {
+      alert("Please connect your wallet first");
+      return;
+    }
     if (!profile?.wallet_address) {
       alert("Please link your wallet in your profile first");
+      return;
+    }
+    if (!hasOnChainProfile) {
+      alert(
+        "Please initialize your on-chain profile first by clicking the button above"
+      );
       return;
     }
     if (!videoFile) {
@@ -84,9 +172,10 @@ export default function SubmitVideoPage() {
     setUploading(true);
     setUploadProgress(0);
     setUploadStatus("Preparing upload...");
+    setBlockchainTxSignature(null);
 
     try {
-      // 1. Upload video to Supabase Storage
+      // STEP 1: Upload video to Supabase Storage
       setUploadStatus("Uploading video...");
       const fileExt = videoFile.name.split(".").pop();
       const fileName = `${bountyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -102,17 +191,33 @@ export default function SubmitVideoPage() {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      setUploadProgress(50);
-      setUploadStatus("Processing...");
-
-      // 2. Store just the file path (we'll generate URLs dynamically)
-      // This works better with private buckets and RLS policies
+      setUploadProgress(30);
       const videoPath = fileName;
 
-      setUploadProgress(70);
-      setUploadStatus("Creating submission...");
+      // STEP 2: Submit to blockchain (reserve escrow)
+      setUploadStatus("Submitting to blockchain...");
+      setIsBlockchainStep(true);
 
-      // 3. Create submission record in database
+      const submissionId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      // For now, use placeholder values for IPFS/Arweave
+      // In production, you would upload to IPFS/Arweave first
+      const blockchainResult = await submitVideoOnChain(connection, wallet, {
+        submissionId,
+        bountyId,
+        ipfsHash: `ipfs-${submissionId}`, // Placeholder
+        arweaveTx: `ar-${submissionId}`, // Placeholder
+        metadataUri: `https://metadata/${submissionId}`, // Placeholder
+      });
+
+      console.log("Blockchain submission result:", blockchainResult);
+      setBlockchainTxSignature(blockchainResult.signature);
+
+      setUploadProgress(60);
+      setIsBlockchainStep(false);
+      setUploadStatus("Saving to database...");
+
+      // STEP 3: Create submission record in database
       const metadata = {
         file_name: videoFile.name,
         file_size: videoFile.size,
@@ -127,14 +232,25 @@ export default function SubmitVideoPage() {
         },
         body: JSON.stringify({
           bounty_id: bountyId,
-          video_url: videoPath, // Store path instead of full URL
+          video_url: videoPath,
           metadata,
+          on_chain_submission_address: blockchainResult.submissionPDA,
+          escrow_tx_signature: blockchainResult.signature,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create submission");
+        // Blockchain succeeded but DB failed - log for recovery
+        console.error("Database write failed after blockchain success:", {
+          signature: blockchainResult.signature,
+          submissionPDA: blockchainResult.submissionPDA,
+          error: errorData.error,
+        });
+        throw new Error(
+          errorData.error ||
+            "Failed to save submission to database. Your blockchain transaction succeeded, please contact support."
+        );
       }
 
       const { submission } = await response.json();
@@ -143,17 +259,25 @@ export default function SubmitVideoPage() {
       setUploadStatus("Complete!");
 
       alert(
-        "Video submitted successfully! You'll receive payment once it's reviewed.",
+        "Video submitted successfully! Escrow has been reserved on-chain. You'll receive payment once it's reviewed and approved."
       );
       router.push("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Submission error:", error);
       setUploadStatus("");
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit video. Please try again.",
-      );
+      setIsBlockchainStep(false);
+
+      let errorMessage = "Failed to submit video. Please try again.";
+      if (error?.message?.includes("insufficient funds")) {
+        errorMessage =
+          "The bounty pool has insufficient funds for this submission.";
+      } else if (error?.message?.includes("User rejected")) {
+        errorMessage = "Transaction was cancelled.";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -206,6 +330,82 @@ export default function SubmitVideoPage() {
                 </p>
               </CardContent>
             </Card>
+          )}
+
+          {!loading &&
+            profile?.wallet_address &&
+            wallet.connected &&
+            !hasOnChainProfile &&
+            !checkingProfile && (
+              <Card className="mb-6 border-yellow-500/50 bg-yellow-500/10">
+                <CardContent className="pt-6">
+                  <p className="text-sm font-medium text-foreground mb-3">
+                    On-Chain Profile Required
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    To submit videos and receive payments, you need to
+                    initialize your on-chain contributor profile. This is a
+                    one-time setup that costs a small transaction fee (~0.001
+                    SOL).
+                  </p>
+                  <Button
+                    onClick={handleInitializeProfile}
+                    disabled={checkingProfile}
+                    size="sm"
+                  >
+                    {checkingProfile
+                      ? "Initializing..."
+                      : "Initialize Profile"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+          {isBlockchainStep && (
+            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="animate-spin h-4 w-4 text-blue-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span className="text-sm text-foreground">
+                  Reserving escrow on blockchain... Please confirm the
+                  transaction in your wallet.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {blockchainTxSignature && !isBlockchainStep && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-sm font-medium text-green-500 mb-1">
+                Blockchain Transaction Successful!
+              </p>
+              <a
+                href={getExplorerUrl(blockchainTxSignature, "devnet")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-green-400 hover:text-green-300 underline"
+              >
+                View on Solana Explorer →
+              </a>
+            </div>
           )}
 
           <form onSubmit={handleSubmit}>
@@ -305,13 +505,48 @@ export default function SubmitVideoPage() {
                   type="submit"
                   className="w-full"
                   size="lg"
-                  disabled={!profile?.wallet_address || uploading || loading}
+                  disabled={
+                    !profile?.wallet_address ||
+                    !wallet.connected ||
+                    !hasOnChainProfile ||
+                    uploading ||
+                    loading ||
+                    checkingProfile
+                  }
                 >
-                  {uploading
-                    ? "Uploading..."
-                    : loading
-                      ? "Loading..."
-                      : "Submit Video"}
+                  {uploading ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      {isBlockchainStep ? "Confirming on blockchain..." : uploadStatus}
+                    </>
+                  ) : loading || checkingProfile ? (
+                    "Loading..."
+                  ) : !wallet.connected ? (
+                    "Connect Wallet to Submit"
+                  ) : !hasOnChainProfile ? (
+                    "Initialize Profile First"
+                  ) : (
+                    "Submit Video"
+                  )}
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">

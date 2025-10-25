@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getExplorerUrl, getExplorerAddressUrl, shortenAddress } from "@/lib/solana/utils";
 
 interface Bounty {
   id: string;
@@ -29,6 +30,9 @@ interface Bounty {
   deadline: string | null;
   created_at: string;
   updated_at: string;
+  is_blockchain_backed?: boolean;
+  on_chain_pool_address?: string;
+  blockchain_tx_signature?: string;
   profiles?: {
     display_name: string;
     avatar_url: string | null;
@@ -217,6 +221,24 @@ export default function BountyDetailPage() {
                   <div className="mt-1 text-sm text-muted-foreground">
                     total reward
                   </div>
+                  {bounty.is_blockchain_backed && (
+                    <div className="mt-2">
+                      <Badge variant="outline" className="border-green-500/50 text-green-500">
+                        <svg
+                          className="mr-1 h-3 w-3"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Blockchain-Backed
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="mb-2 flex items-center justify-between text-sm">
@@ -245,6 +267,68 @@ export default function BountyDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Blockchain Information */}
+          {bounty.is_blockchain_backed && bounty.blockchain_tx_signature && (
+            <Card className="mb-6 border-green-500/20 bg-green-500/5">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <svg
+                    className="h-5 w-5 text-green-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  On-Chain Escrow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  This bounty is secured by a Solana smart contract. Funds are locked
+                  in escrow and automatically released to approved contributors.
+                </p>
+                <div className="flex flex-col gap-2 text-sm">
+                  {bounty.blockchain_tx_signature && (
+                    <div>
+                      <span className="text-muted-foreground">Creation Transaction: </span>
+                      <a
+                        href={getExplorerUrl(bounty.blockchain_tx_signature, "devnet")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-400 hover:text-green-300 underline"
+                      >
+                        {shortenAddress(bounty.blockchain_tx_signature, 8)} →
+                      </a>
+                    </div>
+                  )}
+                  {bounty.on_chain_pool_address && (
+                    <div>
+                      <span className="text-muted-foreground">Escrow Address: </span>
+                      <a
+                        href={getExplorerAddressUrl(bounty.on_chain_pool_address, "devnet")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-400 hover:text-green-300 underline font-mono text-xs"
+                      >
+                        {shortenAddress(bounty.on_chain_pool_address, 6)} →
+                      </a>
+                    </div>
+                  )}
+                </div>
+                <div className="pt-2 border-t border-green-500/20">
+                  <p className="text-xs text-muted-foreground">
+                    Total Pool: {bounty.reward_amount * bounty.total_slots} SOL locked on
+                    Solana Devnet
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Requirements */}
           <Card className="mb-6">

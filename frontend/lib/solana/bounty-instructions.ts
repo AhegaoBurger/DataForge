@@ -1,7 +1,7 @@
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import { getProgramWithWallet } from "./program";
-import { getBountyPDA, solToLamports } from "./utils";
+import { getBountyPDA, solToLamports, uuidToBytes } from "./utils";
 
 export interface CreateBountyParams {
   bountyId: string;
@@ -51,10 +51,13 @@ export async function createBountyOnChain(
   const totalPoolLamports = new BN(solToLamports(params.totalPool));
   const expiresAtUnix = new BN(Math.floor(params.expiresAt.getTime() / 1000));
 
+  // Convert UUID string to bytes for on-chain storage
+  const bountyIdBytes = Array.from(uuidToBytes(params.bountyId));
+
   try {
     const tx = await program.methods
       .createBounty(
-        params.bountyId,
+        bountyIdBytes,
         rewardPerVideoLamports,
         totalPoolLamports,
         params.videosTarget,

@@ -28,9 +28,18 @@ export async function submitVideoOnChain(
   const [submissionPDA] = getSubmissionPDA(params.submissionId);
   const [bountyPDA] = getBountyPDA(params.bountyId);
 
+  // Convert submission ID to 16-byte array
+  // Submission IDs are timestamp-based strings, so we need to pad them
+  const encoder = new TextEncoder();
+  const idBytes = encoder.encode(params.submissionId);
+  const paddedBytes = new Uint8Array(16);
+  const copyLength = Math.min(idBytes.length, 16);
+  paddedBytes.set(idBytes.slice(0, copyLength));
+  const submissionIdArray = Array.from(paddedBytes);
+
   const tx = await program.methods
     .submitVideo(
-      params.submissionId,
+      submissionIdArray,
       params.ipfsHash,
       params.arweaveTx,
       params.metadataUri

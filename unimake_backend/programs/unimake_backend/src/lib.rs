@@ -14,7 +14,8 @@ pub mod unimake_backend {
     /// Create a new bounty with reward pool
     pub fn create_bounty(
         ctx: Context<CreateBounty>,
-        bounty_id: String,
+
+        bounty_id: [u8; 16],
         reward_per_video: u64,
         total_pool: u64,
         videos_target: u32,
@@ -45,7 +46,7 @@ pub mod unimake_backend {
         // Now initialize the bounty account
         let bounty = &mut ctx.accounts.bounty_pool;
         bounty.authority = ctx.accounts.authority.key();
-        bounty.bounty_id = bounty_id.clone();
+        bounty.bounty_id = bounty_id;
         bounty.task_description = task_description;
         bounty.reward_per_video = reward_per_video;
         bounty.total_pool = total_pool;
@@ -81,7 +82,7 @@ pub mod unimake_backend {
         bounty.status = BountyStatus::Paused;
 
         emit!(BountyStatusChanged {
-            bounty_id: bounty.bounty_id.clone(),
+            bounty_id: bounty.bounty_id,
             new_status: BountyStatus::Paused,
         });
 
@@ -98,7 +99,7 @@ pub mod unimake_backend {
         bounty.status = BountyStatus::Active;
 
         emit!(BountyStatusChanged {
-            bounty_id: bounty.bounty_id.clone(),
+            bounty_id: bounty.bounty_id,
             new_status: BountyStatus::Active,
         });
 
@@ -111,7 +112,7 @@ pub mod unimake_backend {
         bounty.status = BountyStatus::Completed;
 
         emit!(BountyStatusChanged {
-            bounty_id: bounty.bounty_id.clone(),
+            bounty_id: bounty.bounty_id,
             new_status: BountyStatus::Completed,
         });
 
@@ -146,7 +147,7 @@ pub mod unimake_backend {
         bounty.remaining_pool = 0;
 
         emit!(BountyStatusChanged {
-            bounty_id: bounty.bounty_id.clone(),
+            bounty_id: bounty.bounty_id,
             new_status: BountyStatus::Cancelled,
         });
 
@@ -160,7 +161,7 @@ pub mod unimake_backend {
     /// Submit a video for review (creates escrow)
     pub fn submit_video(
         ctx: Context<SubmitVideo>,
-        submission_id: String,
+        submission_id: [u8; 16],
         ipfs_hash: String,
         arweave_tx: String,
         metadata_uri: String,
@@ -187,7 +188,7 @@ pub mod unimake_backend {
         let submission = &mut ctx.accounts.submission;
         submission.submission_id = submission_id;
         submission.contributor = ctx.accounts.contributor.key();
-        submission.bounty_id = bounty.bounty_id.clone();
+        submission.bounty_id = bounty.bounty_id;
         submission.ipfs_hash = ipfs_hash;
         submission.arweave_tx = arweave_tx;
         submission.metadata_uri = metadata_uri;
@@ -204,8 +205,8 @@ pub mod unimake_backend {
             .ok_or(ErrorCode::InsufficientPool)?;
 
         emit!(VideoSubmitted {
-            submission_id: submission.submission_id.clone(),
-            bounty_id: bounty.bounty_id.clone(),
+            submission_id: submission.submission_id,
+            bounty_id: bounty.bounty_id,
             contributor: submission.contributor,
             escrow_amount: submission.escrow_amount,
         });
@@ -256,7 +257,7 @@ pub mod unimake_backend {
         profile.recalculate_reputation(quality_score);
 
         emit!(SubmissionApproved {
-            submission_id: submission.submission_id.clone(),
+            submission_id: submission.submission_id,
             contributor: submission.contributor,
             reward,
             quality_score,
@@ -289,7 +290,7 @@ pub mod unimake_backend {
         profile.recalculate_reputation(0);
 
         emit!(SubmissionRejected {
-            submission_id: submission.submission_id.clone(),
+            submission_id: submission.submission_id,
             contributor: submission.contributor,
         });
 
@@ -358,7 +359,7 @@ pub mod unimake_backend {
     /// Create a dataset NFT from approved submissions
     pub fn create_dataset(
         ctx: Context<CreateDataset>,
-        dataset_id: String,
+        dataset_id: [u8; 16],
         license_type: LicenseType,
         price: u64,
         royalty_percentage: u8,
@@ -376,7 +377,7 @@ pub mod unimake_backend {
         dataset.bump = ctx.bumps.dataset_nft;
 
         emit!(DatasetCreated {
-            dataset_id: dataset.dataset_id.clone(),
+            dataset_id: dataset.dataset_id,
             creator: dataset.creator,
             price,
         });
@@ -417,13 +418,13 @@ pub mod unimake_backend {
 // ============================================================================
 
 #[derive(Accounts)]
-#[instruction(bounty_id: String)]
+#[instruction(bounty_id: [u8; 16])]
 pub struct CreateBounty<'info> {
     #[account(
         init,
         payer = authority,
         space = 8 + BountyPool::INIT_SPACE,
-        seeds = [b"bounty", bounty_id.as_bytes()],
+        seeds = [b"bounty".as_ref(), bounty_id.as_ref()],
         bump
     )]
     pub bounty_pool: Account<'info, BountyPool>,
@@ -438,7 +439,7 @@ pub struct CreateBounty<'info> {
 pub struct UpdateBounty<'info> {
     #[account(
         mut,
-        seeds = [b"bounty", bounty_pool.bounty_id.as_bytes()],
+        seeds = [b"bounty".as_ref(), bounty_pool.bounty_id.as_ref()],
         bump,
         has_one = authority
     )]
@@ -451,7 +452,7 @@ pub struct UpdateBounty<'info> {
 pub struct CancelBounty<'info> {
     #[account(
         mut,
-        seeds = [b"bounty", bounty_pool.bounty_id.as_bytes()],
+        seeds = [b"bounty".as_ref(), bounty_pool.bounty_id.as_ref()],
         bump,
         has_one = authority
     )]
@@ -464,20 +465,20 @@ pub struct CancelBounty<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(submission_id: String)]
+#[instruction(submission_id: [u8; 16])]
 pub struct SubmitVideo<'info> {
     #[account(
         init,
         payer = contributor,
         space = 8 + VideoSubmission::INIT_SPACE,
-        seeds = [b"submission", submission_id.as_bytes()],
+        seeds = [b"submission".as_ref(), submission_id.as_ref()],
         bump
     )]
     pub submission: Account<'info, VideoSubmission>,
 
     #[account(
         mut,
-        seeds = [b"bounty", bounty_pool.bounty_id.as_bytes()],
+        seeds = [b"bounty".as_ref(), bounty_pool.bounty_id.as_ref()],
         bump
     )]
     pub bounty_pool: Account<'info, BountyPool>,
@@ -492,14 +493,14 @@ pub struct SubmitVideo<'info> {
 pub struct ReviewSubmission<'info> {
     #[account(
         mut,
-        seeds = [b"submission", submission.submission_id.as_bytes()],
+        seeds = [b"submission".as_ref(), submission.submission_id.as_ref()],
         bump = submission.bump
     )]
     pub submission: Account<'info, VideoSubmission>,
 
     #[account(
         mut,
-        seeds = [b"bounty", bounty_pool.bounty_id.as_bytes()],
+        seeds = [b"bounty".as_ref(), bounty_pool.bounty_id.as_ref()],
         bump,
         has_one = authority
     )]
@@ -552,13 +553,13 @@ pub struct AwardBadge<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(dataset_id: String)]
+#[instruction(dataset_id: [u8; 16])]
 pub struct CreateDataset<'info> {
     #[account(
         init,
         payer = creator,
         space = 8 + DatasetNFT::INIT_SPACE,
-        seeds = [b"dataset", dataset_id.as_bytes()],
+        seeds = [b"dataset".as_ref(), dataset_id.as_ref()],
         bump
     )]
     pub dataset_nft: Account<'info, DatasetNFT>,
@@ -573,7 +574,7 @@ pub struct CreateDataset<'info> {
 pub struct PurchaseDataset<'info> {
     #[account(
         mut,
-        seeds = [b"dataset", dataset_nft.dataset_id.as_bytes()],
+        seeds = [b"dataset".as_ref(), dataset_nft.dataset_id.as_ref()],
         bump = dataset_nft.bump
     )]
     pub dataset_nft: Account<'info, DatasetNFT>,
@@ -596,8 +597,7 @@ pub struct PurchaseDataset<'info> {
 #[derive(InitSpace)]
 pub struct BountyPool {
     pub authority: Pubkey,
-    #[max_len(50)]
-    pub bounty_id: String,
+    pub bounty_id: [u8; 16], // UUID as 16-byte array
     #[max_len(500)]
     pub task_description: String,
     pub requirements: Requirements,
@@ -630,11 +630,9 @@ pub enum BountyStatus {
 #[account]
 #[derive(InitSpace)]
 pub struct VideoSubmission {
-    #[max_len(50)]
-    pub submission_id: String,
+    pub submission_id: [u8; 16], // UUID or unique ID as 16-byte array
     pub contributor: Pubkey,
-    #[max_len(50)]
-    pub bounty_id: String,
+    pub bounty_id: [u8; 16], // UUID as 16-byte array
     #[max_len(100)]
     pub ipfs_hash: String,
     #[max_len(100)]
@@ -725,8 +723,7 @@ pub enum BadgeType {
 #[account]
 #[derive(InitSpace)]
 pub struct DatasetNFT {
-    #[max_len(50)]
-    pub dataset_id: String,
+    pub dataset_id: [u8; 16], // UUID as 16-byte array
     pub license_type: LicenseType,
     pub creator: Pubkey,
     pub price: u64,
@@ -750,7 +747,7 @@ pub enum LicenseType {
 
 #[event]
 pub struct BountyCreated {
-    pub bounty_id: String,
+    pub bounty_id: [u8; 16],
     pub authority: Pubkey,
     pub total_pool: u64,
     pub videos_target: u32,
@@ -758,21 +755,21 @@ pub struct BountyCreated {
 
 #[event]
 pub struct BountyStatusChanged {
-    pub bounty_id: String,
+    pub bounty_id: [u8; 16],
     pub new_status: BountyStatus,
 }
 
 #[event]
 pub struct VideoSubmitted {
-    pub submission_id: String,
-    pub bounty_id: String,
+    pub submission_id: [u8; 16],
+    pub bounty_id: [u8; 16],
     pub contributor: Pubkey,
     pub escrow_amount: u64,
 }
 
 #[event]
 pub struct SubmissionApproved {
-    pub submission_id: String,
+    pub submission_id: [u8; 16],
     pub contributor: Pubkey,
     pub reward: u64,
     pub quality_score: u8,
@@ -780,7 +777,7 @@ pub struct SubmissionApproved {
 
 #[event]
 pub struct SubmissionRejected {
-    pub submission_id: String,
+    pub submission_id: [u8; 16],
     pub contributor: Pubkey,
 }
 
@@ -798,14 +795,14 @@ pub struct BadgeAwarded {
 
 #[event]
 pub struct DatasetCreated {
-    pub dataset_id: String,
+    pub dataset_id: [u8; 16],
     pub creator: Pubkey,
     pub price: u64,
 }
 
 #[event]
 pub struct DatasetPurchased {
-    pub dataset_id: String,
+    pub dataset_id: [u8; 16],
     pub buyer: Pubkey,
     pub price: u64,
 }

@@ -4,6 +4,17 @@ import { UnimakeBackend } from "../target/types/unimake_backend";
 import { PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { assert, expect } from "chai";
 
+// Helper to convert string to 16-byte array for IDs
+function stringToBytes16(str: string): number[] {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  const result = new Array(16).fill(0);
+  for (let i = 0; i < Math.min(bytes.length, 16); i++) {
+    result[i] = bytes[i];
+  }
+  return result;
+}
+
 describe("TerraTrain Smart Contracts", () => {
   // Configure the client to use the local cluster
   const provider = anchor.AnchorProvider.env();
@@ -16,7 +27,7 @@ describe("TerraTrain Smart Contracts", () => {
   const contributor = Keypair.generate();
   const buyer = Keypair.generate();
 
-  // Test data
+  // Test data (strings for readability, will be converted to bytes for on-chain)
   const bountyId = "bounty-test-001";
   const submissionId = "submission-test-001";
   const datasetId = "dataset-test-001";
@@ -41,14 +52,14 @@ describe("TerraTrain Smart Contracts", () => {
     );
     await provider.connection.confirmTransaction(airdropSig2);
 
-    // Calculate PDAs
+    // Calculate PDAs (use byte arrays for ID seeds)
     [bountyPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("bounty"), Buffer.from(bountyId)],
+      [Buffer.from("bounty"), Buffer.from(stringToBytes16(bountyId))],
       program.programId
     );
 
     [submissionPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("submission"), Buffer.from(submissionId)],
+      [Buffer.from("submission"), Buffer.from(stringToBytes16(submissionId))],
       program.programId
     );
 
@@ -58,7 +69,7 @@ describe("TerraTrain Smart Contracts", () => {
     );
 
     [datasetPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("dataset"), Buffer.from(datasetId)],
+      [Buffer.from("dataset"), Buffer.from(stringToBytes16(datasetId))],
       program.programId
     );
   });
@@ -76,7 +87,7 @@ describe("TerraTrain Smart Contracts", () => {
 
       const tx = await program.methods
         .createBounty(
-          bountyId,
+          stringToBytes16(bountyId),
           rewardPerVideo,
           totalPool,
           videosTarget,
@@ -98,7 +109,11 @@ describe("TerraTrain Smart Contracts", () => {
       // Fetch and verify bounty account
       const bountyAccount = await program.account.bountyPool.fetch(bountyPda);
 
-      assert.equal(bountyAccount.bountyId, bountyId);
+      // bountyId is now a byte array, compare as arrays
+      assert.deepEqual(
+        Array.from(bountyAccount.bountyId),
+        stringToBytes16(bountyId)
+      );
       assert.equal(
         bountyAccount.authority.toString(),
         authority.publicKey.toString()
@@ -149,14 +164,14 @@ describe("TerraTrain Smart Contracts", () => {
     it("Fails to create bounty with insufficient pool", async () => {
       const insufficientBountyId = "bounty-insufficient";
       const [insufficientBountyPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("bounty"), Buffer.from(insufficientBountyId)],
+        [Buffer.from("bounty"), Buffer.from(stringToBytes16(insufficientBountyId))],
         program.programId
       );
 
       try {
         await program.methods
           .createBounty(
-            insufficientBountyId,
+            stringToBytes16(insufficientBountyId),
             new BN(0.2 * LAMPORTS_PER_SOL), // reward per video
             new BN(0.5 * LAMPORTS_PER_SOL), // total pool (insufficient for 10 videos)
             10, // videos target
@@ -254,7 +269,7 @@ describe("TerraTrain Smart Contracts", () => {
       const metadataUri = "https://arweave.net/metadata";
 
       await program.methods
-        .submitVideo(submissionId, ipfsHash, arweaveTx, metadataUri)
+        .submitVideo(stringToBytes16(submissionId), ipfsHash, arweaveTx, metadataUri)
         .accountsPartial({
           submission: submissionPda,
           bountyPool: bountyPda,
@@ -268,12 +283,18 @@ describe("TerraTrain Smart Contracts", () => {
         submissionPda
       );
 
-      assert.equal(submission.submissionId, submissionId);
+      assert.deepEqual(
+        Array.from(submission.submissionId),
+        stringToBytes16(submissionId)
+      );
       assert.equal(
         submission.contributor.toString(),
         contributor.publicKey.toString()
       );
-      assert.equal(submission.bountyId, bountyId);
+      assert.deepEqual(
+        Array.from(submission.bountyId),
+        stringToBytes16(bountyId)
+      );
       assert.equal(submission.ipfsHash, ipfsHash);
       assert.equal(submission.arweaveTx, arweaveTx);
       assert.equal(submission.metadataUri, metadataUri);
@@ -345,13 +366,13 @@ describe("TerraTrain Smart Contracts", () => {
 
       const failedSubmissionId = "submission-fail-001";
       const [failedSubmissionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("submission"), Buffer.from(failedSubmissionId)],
+        [Buffer.from("submission"), Buffer.from(stringToBytes16(failedSubmissionId))],
         program.programId
       );
 
       try {
         await program.methods
-          .submitVideo(failedSubmissionId, "hash", "tx", "uri")
+          .submitVideo(stringToBytes16(failedSubmissionId), "hash", "tx", "uri")
           .accountsPartial({
             submission: failedSubmissionPda,
             bountyPool: bountyPda,
@@ -388,7 +409,7 @@ describe("TerraTrain Smart Contracts", () => {
 
       await program.methods
         .createDataset(
-          datasetId,
+          stringToBytes16(datasetId),
           { unlimited: {} }, // license type
           price,
           royaltyPercentage
@@ -402,7 +423,10 @@ describe("TerraTrain Smart Contracts", () => {
 
       const dataset = await program.account.datasetNft.fetch(datasetPda);
 
-      assert.equal(dataset.datasetId, datasetId);
+      assert.deepEqual(
+        Array.from(dataset.datasetId),
+        stringToBytes16(datasetId)
+      );
       assert.equal(dataset.creator.toString(), authority.publicKey.toString());
       assert.equal(dataset.price.toString(), price.toString());
       assert.equal(dataset.royaltyPercentage, royaltyPercentage);
@@ -449,14 +473,14 @@ describe("TerraTrain Smart Contracts", () => {
     it("Fails to create dataset with invalid royalty", async () => {
       const invalidDatasetId = "dataset-invalid";
       const [invalidDatasetPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("dataset"), Buffer.from(invalidDatasetId)],
+        [Buffer.from("dataset"), Buffer.from(stringToBytes16(invalidDatasetId))],
         program.programId
       );
 
       try {
         await program.methods
           .createDataset(
-            invalidDatasetId,
+            stringToBytes16(invalidDatasetId),
             { unlimited: {} },
             new BN(1 * LAMPORTS_PER_SOL),
             150 // Invalid: > 100%
@@ -486,24 +510,24 @@ describe("TerraTrain Smart Contracts", () => {
       const workflowDatasetId = "dataset-workflow";
 
       const [workflowBountyPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("bounty"), Buffer.from(workflowBountyId)],
+        [Buffer.from("bounty"), Buffer.from(stringToBytes16(workflowBountyId))],
         program.programId
       );
 
       const [workflowSubmissionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("submission"), Buffer.from(workflowSubmissionId)],
+        [Buffer.from("submission"), Buffer.from(stringToBytes16(workflowSubmissionId))],
         program.programId
       );
 
       const [workflowDatasetPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("dataset"), Buffer.from(workflowDatasetId)],
+        [Buffer.from("dataset"), Buffer.from(stringToBytes16(workflowDatasetId))],
         program.programId
       );
 
       // Step 1: Create bounty
       await program.methods
         .createBounty(
-          workflowBountyId,
+          stringToBytes16(workflowBountyId),
           new BN(0.05 * LAMPORTS_PER_SOL),
           new BN(0.5 * LAMPORTS_PER_SOL),
           10,
@@ -523,7 +547,7 @@ describe("TerraTrain Smart Contracts", () => {
       // Step 2: Submit video
       await program.methods
         .submitVideo(
-          workflowSubmissionId,
+          stringToBytes16(workflowSubmissionId),
           "QmWorkflow",
           "ArweaveWorkflow",
           "https://metadata/workflow"
@@ -553,7 +577,7 @@ describe("TerraTrain Smart Contracts", () => {
       // Step 4: Create dataset from approved submissions
       await program.methods
         .createDataset(
-          workflowDatasetId,
+          stringToBytes16(workflowDatasetId),
           { commercialResale: {} },
           new BN(10 * LAMPORTS_PER_SOL),
           15
@@ -592,14 +616,14 @@ describe("TerraTrain Smart Contracts", () => {
     it("Handles rejection workflow correctly", async () => {
       const rejectSubmissionId = "submission-reject";
       const [rejectSubmissionPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("submission"), Buffer.from(rejectSubmissionId)],
+        [Buffer.from("submission"), Buffer.from(stringToBytes16(rejectSubmissionId))],
         program.programId
       );
 
       // Submit video
       await program.methods
         .submitVideo(
-          rejectSubmissionId,
+          stringToBytes16(rejectSubmissionId),
           "QmReject",
           "ArweaveReject",
           "https://metadata/reject"

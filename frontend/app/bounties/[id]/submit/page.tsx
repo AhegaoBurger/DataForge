@@ -42,6 +42,15 @@ interface UserProfile {
   reputation_score?: number;
 }
 
+interface Bounty {
+  id: string;
+  bounty_id: string | null;
+  title: string;
+  description: string;
+  reward_amount: number;
+  is_blockchain_backed: boolean;
+}
+
 export default function SubmitVideoPage() {
   const router = useRouter();
   const params = useParams();
@@ -52,6 +61,7 @@ export default function SubmitVideoPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [bounty, setBounty] = useState<Bounty | null>(null);
   const [loading, setLoading] = useState(true);
   const [isBlockchainStep, setIsBlockchainStep] = useState(false);
   const [blockchainTxSignature, setBlockchainTxSignature] = useState<
@@ -65,6 +75,7 @@ export default function SubmitVideoPage() {
 
   useEffect(() => {
     checkProfile();
+    fetchBounty();
   }, []);
 
   useEffect(() => {
@@ -81,6 +92,33 @@ export default function SubmitVideoPage() {
       checkOnChainProfile();
     }
   }, [wallet.connected, wallet.publicKey, profile]);
+
+  const fetchBounty = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bounties")
+        .select("id, bounty_id, title, description, reward_amount, is_blockchain_backed")
+        .eq("id", bountyId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching bounty:", error);
+        alert("Failed to load bounty details");
+        return;
+      }
+
+      if (!data.is_blockchain_backed || !data.bounty_id) {
+        alert("This bounty is not blockchain-backed. Please contact support.");
+        router.push("/bounties");
+        return;
+      }
+
+      setBounty(data);
+    } catch (error) {
+      console.error("Error fetching bounty:", error);
+      alert("Failed to load bounty details");
+    }
+  };
 
   const checkProfile = async () => {
     // Check if user is authenticated
@@ -184,6 +222,10 @@ export default function SubmitVideoPage() {
       alert("Please select a video file");
       return;
     }
+    if (!bounty?.bounty_id) {
+      alert("Bounty blockchain ID not found. Please try again.");
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -220,7 +262,7 @@ export default function SubmitVideoPage() {
       // In production, you would upload to IPFS/Arweave first
       const blockchainResult = await submitVideoOnChain(connection, wallet, {
         submissionId,
-        bountyId,
+        bountyId: bounty.bounty_id, // Use blockchain UUID, not database ID
         ipfsHash: `ipfs-${submissionId}`, // Placeholder
         arweaveTx: `ar-${submissionId}`, // Placeholder
         metadataUri: `https://metadata/${submissionId}`, // Placeholder

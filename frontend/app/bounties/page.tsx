@@ -240,6 +240,7 @@ export default function BountiesPage() {
             ? new Date(formData.deadline).toISOString()
             : null,
           // Blockchain fields
+          bounty_id: bountyId, // Store the blockchain UUID
           on_chain_pool_address: blockchainResult.bountyPDA,
           blockchain_tx_signature: blockchainResult.signature,
           is_blockchain_backed: true,

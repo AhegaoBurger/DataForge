@@ -32,6 +32,7 @@ export async function POST(request: Request) {
 
   // Extract blockchain-related fields from the body
   const {
+    bounty_id,
     on_chain_pool_address,
     blockchain_tx_signature,
     is_blockchain_backed,
@@ -40,11 +41,11 @@ export async function POST(request: Request) {
 
   // Validate blockchain fields if provided
   if (is_blockchain_backed) {
-    if (!on_chain_pool_address || !blockchain_tx_signature) {
+    if (!bounty_id || !on_chain_pool_address || !blockchain_tx_signature) {
       return NextResponse.json(
         {
           error:
-            "Blockchain-backed bounties require on_chain_pool_address and blockchain_tx_signature",
+            "Blockchain-backed bounties require bounty_id, on_chain_pool_address and blockchain_tx_signature",
         },
         { status: 400 }
       )
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
     .insert({
       creator_id: user.id,
       ...bountyData,
+      bounty_id: bounty_id || null,
       on_chain_pool_address: on_chain_pool_address || null,
       blockchain_tx_signature: blockchain_tx_signature || null,
       is_blockchain_backed: is_blockchain_backed || false,

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { debugAuthStatus } from "@/lib/auth/client";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { createBountyOnChain } from "@/lib/solana/bounty-instructions";
@@ -63,6 +63,10 @@ export default function BountiesPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [blockchainTxSignature, setBlockchainTxSignature] = useState<string | null>(null);
   const [isBlockchainStep, setIsBlockchainStep] = useState(false);
+  const [currentBountyId, setCurrentBountyId] = useState<string | null>(null);
+
+  // Use ref to prevent race conditions with concurrent submissions
+  const isSubmittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -114,6 +118,15 @@ export default function BountiesPage() {
 
   const handleCreateBounty = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // CRITICAL: Prevent concurrent submissions using ref
+    if (isSubmittingRef.current) {
+      console.warn("⚠️ DUPLICATE SUBMISSION BLOCKED - handleCreateBounty called while already in progress");
+      return;
+    }
+
+    console.log("✅ Starting bounty creation - lock acquired");
+    isSubmittingRef.current = true;
     setIsCreating(true);
     setCreateError(null);
     setBlockchainTxSignature(null);
@@ -122,6 +135,7 @@ export default function BountiesPage() {
     if (!isAuthenticated) {
       setCreateError("You must be signed in to create a bounty");
       setIsCreating(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -129,6 +143,7 @@ export default function BountiesPage() {
     if (!wallet.connected || !wallet.publicKey) {
       setCreateError("Please connect your wallet to create a blockchain-backed bounty");
       setIsCreating(false);
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -195,8 +210,11 @@ export default function BountiesPage() {
 
       // STEP 1: Create bounty on blockchain
       setIsBlockchainStep(true);
-      // Generate a proper UUID for bounty ID (required for PDA derivation)
-      const bountyId = uuidv4();
+      // Use existing UUID or generate new one (required for PDA derivation)
+      const bountyId = currentBountyId || uuidv4();
+      if (!currentBountyId) {
+        setCurrentBountyId(bountyId); // Store for potential retries
+      }
       const expiresAt = formData.deadline
         ? new Date(formData.deadline)
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days default
@@ -274,6 +292,7 @@ export default function BountiesPage() {
         example_video_url: "",
         deadline: "",
       });
+      setCurrentBountyId(null); // Reset UUID for next bounty
       setShowCreateForm(false);
       setCreateSuccess(
         `Bounty created successfully! ${totalPool.toFixed(2)} SOL locked in escrow.`
@@ -304,6 +323,10 @@ export default function BountiesPage() {
       } else if (err.message?.includes("already been processed")) {
         errorMessage =
           "This bounty ID already exists. Please try again (a new ID will be generated).";
+        setCurrentBountyId(null); // Force new UUID on retry
+      } else if (err.message?.includes("already exists")) {
+        errorMessage = err.message + " Click submit again to retry with a new ID.";
+        setCurrentBountyId(null); // Force new UUID on retry
       } else if (err.message?.includes("Simulation failed")) {
         errorMessage = `Transaction simulation failed: ${err.message}. Check console for details.`;
       } else if (err.message) {
@@ -314,6 +337,7 @@ export default function BountiesPage() {
     } finally {
       setIsCreating(false);
       setIsBlockchainStep(false);
+      isSubmittingRef.current = false; // Release lock
     }
   };
 
@@ -496,7 +520,11 @@ export default function BountiesPage() {
             </Button>
           ) : isAuthenticated ? (
             <Button
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => {
+                setShowCreateForm(true);
+                setCurrentBountyId(null); // Reset UUID for new bounty
+                setCreateError(null);
+              }}
               className="shrink-0"
             >
               Create Bounty
@@ -578,7 +606,11 @@ export default function BountiesPage() {
                   <h2 className="text-2xl font-bold">Create New Bounty</h2>
                   <Button
                     variant="ghost"
-                    onClick={() => setShowCreateForm(false)}
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setCurrentBountyId(null); // Reset UUID when closing
+                      setCreateError(null);
+                    }}
                     disabled={isCreating}
                   >
                     Cancel
@@ -882,7 +914,11 @@ export default function BountiesPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={() => {
+                        setShowCreateForm(false);
+                        setCurrentBountyId(null); // Reset UUID when closing
+                        setCreateError(null);
+                      }}
                       disabled={isCreating}
                     >
                       Cancel

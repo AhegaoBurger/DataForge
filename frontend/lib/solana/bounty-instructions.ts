@@ -1,5 +1,5 @@
 import { AnchorProvider, BN } from "@coral-xyz/anchor";
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getProgramWithWallet } from "./program";
 import { getBountyPDA, solToLamports, uuidToBytes } from "./utils";
 
@@ -33,13 +33,16 @@ export async function createBountyOnChain(
   const [bountyPDA] = getBountyPDA(params.bountyId);
 
   // Check if this bounty PDA already exists
+  console.log("Checking if bounty PDA exists:", bountyPDA.toString());
   try {
     const existingAccount = await connection.getAccountInfo(bountyPDA);
     if (existingAccount) {
+      console.error("Bounty PDA already exists on-chain!");
       throw new Error(
-        `Bounty with ID "${params.bountyId}" already exists. Please try again with a different ID.`
+        `Bounty with ID "${params.bountyId}" already exists on-chain. Please try again with a different ID.`
       );
     }
+    console.log("Bounty PDA is available (account does not exist)");
   } catch (error: any) {
     if (error.message?.includes("already exists")) {
       throw error;
@@ -55,7 +58,13 @@ export async function createBountyOnChain(
   const bountyIdBytes = Array.from(uuidToBytes(params.bountyId));
 
   try {
-    const tx = await program.methods
+    // CRITICAL: Get FRESH blockhash for each transaction attempt
+    // This ensures retries don't reuse the same transaction signature
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    console.log("Creating transaction with fresh blockhash:", blockhash.slice(0, 8) + "...");
+
+    // Build the transaction instruction
+    const instruction = await program.methods
       .createBounty(
         bountyIdBytes,
         rewardPerVideoLamports,
@@ -72,27 +81,93 @@ export async function createBountyOnChain(
         authority: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
-      .rpc();
+      .instruction();
 
-    console.log("Transaction sent:", tx);
+    // Build transaction with explicit blockhash
+    const transaction = new Transaction();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
 
-    // Wait for confirmation
-    const latestBlockhash = await connection.getLatestBlockhash();
-    await connection.confirmTransaction({
-      signature: tx,
-      blockhash: latestBlockhash.blockhash,
-      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    // Add memo instruction with timestamp to ensure transaction uniqueness
+    // This prevents wallet caching and ensures each attempt is unique
+    const timestamp = Date.now();
+    const memoData = Buffer.from(`TerraTrain Bounty Creation: ${timestamp}`, 'utf-8');
+    const memoInstruction = new TransactionInstruction({
+      keys: [],
+      programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'), // Memo program
+      data: memoData,
     });
 
-    console.log("Transaction confirmed:", tx);
+    transaction.add(memoInstruction);
+    transaction.add(instruction);
+
+    console.log("Transaction uniqueness timestamp:", timestamp);
+    console.log("Transaction details:", {
+      blockhash: blockhash.slice(0, 12) + "...",
+      feePayer: wallet.publicKey.toString().slice(0, 12) + "...",
+      instructionCount: transaction.instructions.length,
+      memoData: memoData.toString().slice(0, 50) + "...",
+    });
+
+    // Sign and send the transaction
+    console.log("Requesting wallet signature...");
+    console.log("Wallet adapter name:", wallet.adapter?.name);
+
+    // Use wallet's sendTransaction if available (some wallets require this)
+    // Otherwise fall back to manual signing + sending
+    let signature: string;
+
+    if (wallet.sendTransaction) {
+      console.log("Using wallet.sendTransaction (wallet will handle signing and sending)");
+      signature = await wallet.sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        maxRetries: 0, // Don't retry - we handle retries at higher level
+      });
+    } else {
+      console.log("Using manual signing + sendRawTransaction");
+      const signedTx = await wallet.signTransaction(transaction);
+      signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        maxRetries: 0,
+      });
+    }
+
+    console.log("Transaction sent:", signature);
+
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log("Transaction confirmed:", signature);
 
     return {
-      signature: tx,
+      signature,
       bountyPDA: bountyPDA.toString(),
       bountyId: params.bountyId,
     };
   } catch (error: any) {
     console.error("Create bounty transaction failed:", error);
+
+    // Enhanced error logging for debugging
+    if (error.logs) {
+      console.error("Transaction logs:", error.logs);
+    }
+    if (error.signature) {
+      console.error("Failed transaction signature:", error.signature);
+    }
+
+    // Provide more helpful error messages
+    if (error.message?.includes("already been processed")) {
+      throw new Error(
+        "Transaction was already processed. This bounty may already exist. Please refresh the page and try again."
+      );
+    }
+
     throw error;
   }
 }

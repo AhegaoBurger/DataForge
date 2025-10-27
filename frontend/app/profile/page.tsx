@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,13 @@ import {
   signInWithWallet,
 } from "@/lib/auth/client";
 import { WalletButton } from "@/components/wallet-button";
+import {
+  initializeProfileOnChain,
+  checkProfileExists,
+  fetchProfileData,
+  syncReputationToDatabase,
+} from "@/lib/solana/profile-instructions";
+import { getProfilePDA, getExplorerAddressUrl } from "@/lib/solana/utils";
 
 interface UserProfile {
   id: string;
@@ -32,10 +39,13 @@ interface UserProfile {
   reputation_score?: number;
   created_at: string;
   updated_at: string;
+  on_chain_profile_address?: string;
 }
 
 export default function ProfilePage() {
-  const { connected, publicKey, disconnect } = useWallet();
+  const wallet = useWallet();
+  const { connected, publicKey, disconnect } = wallet;
+  const { connection } = useConnection();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +54,9 @@ export default function ProfilePage() {
   const [linkingWallet, setLinkingWallet] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [hasOnChainProfile, setHasOnChainProfile] = useState(false);
+  const [checkingOnChainProfile, setCheckingOnChainProfile] = useState(false);
+  const [syncingReputation, setSyncingReputation] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -64,6 +77,16 @@ export default function ProfilePage() {
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    // Check for on-chain profile when wallet is connected
+    if (connected && publicKey && profile?.wallet_address) {
+      // Verify the connected wallet matches the profile wallet
+      if (publicKey.toString() === profile.wallet_address) {
+        checkOnChainProfile();
+      }
+    }
+  }, [connected, publicKey, profile]);
 
   const checkAuth = async () => {
     const {
@@ -87,6 +110,154 @@ export default function ProfilePage() {
 
     setProfile(profileResult.profile || null);
     setLoading(false);
+  };
+
+  const checkOnChainProfile = async () => {
+    if (!publicKey) return;
+
+    setCheckingOnChainProfile(true);
+    try {
+      const exists = await checkProfileExists(
+        connection,
+        publicKey.toString()
+      );
+      setHasOnChainProfile(exists);
+
+      // Check if profile exists on-chain but not saved in DB
+      if (exists && !profile?.on_chain_profile_address) {
+        // Profile exists on-chain but PDA not saved in database
+        console.log("On-chain profile exists but not saved in DB - needs sync");
+      }
+    } catch (error) {
+      console.error("Error checking on-chain profile:", error);
+    } finally {
+      setCheckingOnChainProfile(false);
+    }
+  };
+
+  const handleSyncProfilePDA = async () => {
+    if (!publicKey || !profile) return;
+
+    setCheckingOnChainProfile(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Fetch the profile PDA from the blockchain
+      const [profilePDA] = getProfilePDA(publicKey);
+
+      // Save PDA to database
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          on_chain_profile_address: profilePDA.toString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save profile PDA to database");
+      }
+
+      const { profile: updatedProfile } = await response.json();
+      setProfile(updatedProfile);
+      setSuccess("On-chain profile synced to database successfully!");
+    } catch (error: any) {
+      console.error("Profile sync error:", error);
+      setError(
+        error?.message || "Failed to sync profile. Please try again."
+      );
+    } finally {
+      setCheckingOnChainProfile(false);
+    }
+  };
+
+  const handleInitializeProfile = async () => {
+    if (!connected || !publicKey) {
+      setError("Please connect your wallet first");
+      return;
+    }
+
+    setCheckingOnChainProfile(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const result = await initializeProfileOnChain(connection, wallet);
+      console.log("Profile initialized:", result);
+
+      // Update database profile with on-chain address
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          on_chain_profile_address: result.profilePDA,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save profile PDA to database");
+      }
+
+      const { profile: updatedProfile } = await response.json();
+      setProfile(updatedProfile);
+      setHasOnChainProfile(true);
+      setSuccess(
+        "On-chain profile created successfully! You can now submit videos."
+      );
+    } catch (error: any) {
+      console.error("Profile initialization error:", error);
+      setError(
+        error?.message || "Failed to initialize profile. Please try again."
+      );
+    } finally {
+      setCheckingOnChainProfile(false);
+    }
+  };
+
+  const handleSyncReputation = async () => {
+    if (!publicKey || !profile) return;
+
+    setSyncingReputation(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const reputationData = await syncReputationToDatabase(
+        connection,
+        publicKey.toString()
+      );
+
+      if (!reputationData) {
+        throw new Error("Failed to fetch reputation data from blockchain");
+      }
+
+      // Update database with synced reputation
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          total_submissions: reputationData.totalSubmissions,
+          total_earnings: reputationData.totalEarnings,
+          reputation_score: reputationData.reputationScore,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save reputation data to database");
+      }
+
+      const { profile: updatedProfile } = await response.json();
+      setProfile(updatedProfile);
+      setSuccess("Reputation data synced from blockchain successfully!");
+    } catch (error: any) {
+      console.error("Reputation sync error:", error);
+      setError(
+        error?.message || "Failed to sync reputation. Please try again."
+      );
+    } finally {
+      setSyncingReputation(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -440,6 +611,204 @@ export default function ProfilePage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* On-Chain Profile Status */}
+              {profile?.wallet_address && connected && publicKey?.toString() === profile.wallet_address && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>On-Chain Profile</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {checkingOnChainProfile ? (
+                      <div className="flex items-center justify-center py-6">
+                        <svg
+                          className="animate-spin h-8 w-8 text-primary"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                      </div>
+                    ) : hasOnChainProfile && profile.on_chain_profile_address ? (
+                      // Profile exists on-chain AND saved in DB
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">
+                            Status
+                          </Label>
+                          <p className="mt-1 text-sm text-green-600 flex items-center gap-2">
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            On-chain profile initialized and synced
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-muted-foreground">
+                            Profile PDA Address
+                          </Label>
+                          <div className="mt-1 flex items-center gap-2">
+                            <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-xs break-all">
+                              {profile.on_chain_profile_address}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                navigator.clipboard.writeText(
+                                  profile.on_chain_profile_address || ""
+                                )
+                              }
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <a
+                            href={getExplorerAddressUrl(
+                              profile.on_chain_profile_address,
+                              "devnet"
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                          >
+                            View on Solana Explorer
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                          <Label className="text-xs text-muted-foreground mb-2 block">
+                            Sync Reputation Data
+                          </Label>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Pull your latest reputation stats (submissions, earnings, scores) from the blockchain to update your profile.
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleSyncReputation}
+                            disabled={syncingReputation}
+                          >
+                            {syncingReputation ? "Syncing..." : "Sync from Blockchain"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : hasOnChainProfile && !profile.on_chain_profile_address ? (
+                      // Profile exists on-chain but NOT saved in DB (needs sync)
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
+                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                            <svg
+                              className="h-5 w-5 text-yellow-600"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                              />
+                            </svg>
+                            Profile Needs Sync
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Your on-chain profile exists but isn't linked to your database profile. Click below to sync it.
+                          </p>
+                          <Button
+                            onClick={handleSyncProfilePDA}
+                            disabled={checkingOnChainProfile}
+                            className="w-full"
+                          >
+                            {checkingOnChainProfile
+                              ? "Syncing..."
+                              : "Sync Profile to Database"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Profile does NOT exist on-chain (needs initialization)
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                          <div className="mb-4">
+                            <svg
+                              className="mx-auto h-12 w-12 text-muted-foreground"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                              />
+                            </svg>
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-2">
+                            No On-Chain Profile
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Initialize your on-chain contributor profile to submit videos and receive payments. This is a one-time setup (~0.001 SOL fee).
+                          </p>
+                          <Button
+                            onClick={handleInitializeProfile}
+                            disabled={checkingOnChainProfile}
+                            className="w-full"
+                          >
+                            {checkingOnChainProfile
+                              ? "Initializing..."
+                              : "Initialize On-Chain Profile"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Wallet Linking */}
               <Card>

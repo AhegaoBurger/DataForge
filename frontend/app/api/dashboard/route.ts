@@ -142,6 +142,42 @@ export async function GET() {
       }
     }
 
+    // Get pending reviews for ACTIVE bounties created by this user
+    const { data: userBounties, error: userBountiesError } = await supabase
+      .from("bounties")
+      .select("id")
+      .eq("creator_id", user.id)
+      .eq("status", "active");
+
+    let pendingReviews: Array<{
+      id: string;
+      bountyId: string;
+      bountyTitle: string;
+      contributorName: string;
+      submittedDate: string;
+    }> = [];
+
+    if (!userBountiesError && userBounties && userBounties.length > 0) {
+      const bountyIdsForReview = userBounties.map((b) => b.id);
+
+      const { data: reviewSubmissions, error: reviewError } = await supabase
+        .from("submissions")
+        .select("id, bounty_id, created_at, bounties(title), profiles:contributor_id(display_name)")
+        .in("bounty_id", bountyIdsForReview)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!reviewError && reviewSubmissions) {
+        pendingReviews = reviewSubmissions.map((sub: any) => ({
+          id: sub.id,
+          bountyId: sub.bounty_id,
+          bountyTitle: sub.bounties?.title || "Unknown Bounty",
+          contributorName: sub.profiles?.display_name || "Anonymous",
+          submittedDate: sub.created_at,
+        }));
+      }
+    }
+
     const userData = {
       videosSubmitted,
       videosApproved,
@@ -156,6 +192,7 @@ export async function GET() {
       userData,
       recentSubmissions,
       activeBounties,
+      pendingReviews,
     });
   } catch (error) {
     console.error("Dashboard API error:", error);

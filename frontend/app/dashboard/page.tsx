@@ -42,12 +42,21 @@ interface ActiveBounty {
   yourSubmissions: number;
 }
 
+interface PendingReview {
+  id: string;
+  bountyId: string;
+  bountyTitle: string;
+  contributorName: string;
+  submittedDate: string;
+}
+
 export default function DashboardPage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [recentSubmissions, setRecentSubmissions] = useState<
     RecentSubmission[]
   >([]);
   const [activeBounties, setActiveBounties] = useState<ActiveBounty[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -119,6 +128,7 @@ export default function DashboardPage() {
       setUserData(data.userData);
       setRecentSubmissions(data.recentSubmissions || []);
       setActiveBounties(data.activeBounties || []);
+      setPendingReviews(data.pendingReviews || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -349,9 +359,10 @@ export default function DashboardPage() {
 
         {/* Main Content */}
         <Tabs defaultValue="submissions" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
             <TabsTrigger value="submissions">My Submissions</TabsTrigger>
             <TabsTrigger value="bounties">Active Bounties</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
           </TabsList>
 
           <TabsContent value="submissions" className="mt-6">
@@ -485,6 +496,52 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="reviews" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pendingReviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      No pending reviews. All submissions have been reviewed!
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingReviews.map((review) => (
+                      <div
+                        key={review.id}
+                        className="flex flex-col gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex-1">
+                          <h4 className="font-medium">{review.bountyTitle}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Submitted by {review.contributorName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(review.submittedDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="border-yellow-600 text-yellow-600">
+                            Pending
+                          </Badge>
+                          <Button asChild size="sm">
+                            <Link href={`/bounties/${review.bountyId}/review`}>
+                              Review
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

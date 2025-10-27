@@ -404,7 +404,7 @@ export default function ProfilePage() {
                     <Label htmlFor="display_name">Display Name</Label>
                     <Input
                       id="display_name"
-                      value={formData.display_name}
+                      value={formData.display_name || ""}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -419,7 +419,7 @@ export default function ProfilePage() {
                     <Label htmlFor="bio">Bio</Label>
                     <Textarea
                       id="bio"
-                      value={formData.bio}
+                      value={formData.bio || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, bio: e.target.value })
                       }

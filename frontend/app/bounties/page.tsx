@@ -71,8 +71,8 @@ export default function BountiesPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "",
-    difficulty: "",
+    category: "household",
+    difficulty: "easy",
     reward_amount: "",
     total_slots: "",
     requirements: "",
@@ -283,8 +283,8 @@ export default function BountiesPage() {
       setFormData({
         title: "",
         description: "",
-        category: "",
-        difficulty: "",
+        category: "household",
+        difficulty: "easy",
         reward_amount: "",
         total_slots: "",
         requirements: "",
@@ -429,19 +429,20 @@ export default function BountiesPage() {
             <Input
               placeholder="Search bounties..."
               className="sm:max-w-xs"
+              value=""
               disabled
             />
-            <Select disabled>
+            <Select value="all" disabled>
               <SelectTrigger className="sm:w-[180px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
             </Select>
-            <Select disabled>
+            <Select value="all" disabled>
               <SelectTrigger className="sm:w-[180px]">
                 <SelectValue placeholder="Difficulty" />
               </SelectTrigger>
             </Select>
-            <Select disabled>
+            <Select value="newest" disabled>
               <SelectTrigger className="sm:w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>

@@ -99,14 +99,15 @@ export default function MarketplacePage() {
             <Input
               placeholder="Search datasets..."
               className="sm:max-w-xs"
+              value=""
               disabled
             />
-            <Select disabled>
+            <Select value="all" disabled>
               <SelectTrigger className="sm:w-[180px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
             </Select>
-            <Select disabled>
+            <Select value="newest" disabled>
               <SelectTrigger className="sm:w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>

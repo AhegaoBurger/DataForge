@@ -8,11 +8,16 @@ export async function GET(
   const supabase = await createClient()
   const { id } = await params
 
+  // Get current user (may be null for unauthenticated requests)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Fetch bounty without status filter
   const { data: bounty, error } = await supabase
     .from("bounties")
     .select("*, profiles:creator_id(display_name, avatar_url)")
     .eq("id", id)
-    .eq("status", "active")
     .single()
 
   if (error) {
@@ -20,6 +25,13 @@ export async function GET(
       return NextResponse.json({ error: "Bounty not found" }, { status: 404 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // If bounty is not active, only allow creator to view it
+  if (bounty.status !== "active") {
+    if (!user || bounty.creator_id !== user.id) {
+      return NextResponse.json({ error: "Bounty not found" }, { status: 404 })
+    }
   }
 
   return NextResponse.json({ bounty })

@@ -6,9 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getExplorerUrl, getExplorerAddressUrl, shortenAddress } from "@/lib/solana/utils";
 
@@ -41,6 +52,7 @@ interface Bounty {
 
 export default function BountyDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const bountyId = params.id as string;
   const supabase = createClient();
 
@@ -48,6 +60,7 @@ export default function BountyDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreator, setIsCreator] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (bountyId) {
@@ -81,6 +94,56 @@ export default function BountyDetailPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCompleteBounty = async () => {
+    if (!bounty) return;
+
+    try {
+      setIsProcessing(true);
+      const response = await fetch(`/api/bounties/${bountyId}/complete`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to complete bounty");
+      }
+
+      const data = await response.json();
+      setBounty(data.bounty);
+      // Optionally show a success message
+      alert("Bounty completed successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to complete bounty");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelBounty = async () => {
+    if (!bounty) return;
+
+    try {
+      setIsProcessing(true);
+      const response = await fetch(`/api/bounties/${bountyId}/cancel`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to cancel bounty");
+      }
+
+      const data = await response.json();
+      setBounty(data.bounty);
+      // Optionally show a success message
+      alert("Bounty cancelled successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to cancel bounty");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -181,6 +244,37 @@ export default function BountyDetailPage() {
             </Link>
           </Button>
 
+          {/* Closed Bounty Banner */}
+          {bounty.status !== "active" && isCreator && (
+            <div className="mb-6 rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="h-5 w-5 text-yellow-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div>
+                  <p className="font-semibold text-yellow-500">
+                    This bounty is {bounty.status}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {bounty.status === "completed"
+                      ? "This bounty has been marked as completed and is no longer accepting submissions."
+                      : "This bounty has been cancelled and is no longer active."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -197,6 +291,18 @@ export default function BountyDetailPage() {
               >
                 {bounty.difficulty.charAt(0).toUpperCase() +
                   bounty.difficulty.slice(1)}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={
+                  bounty.status === "active"
+                    ? "border-green-500/50 text-green-500"
+                    : bounty.status === "completed"
+                      ? "border-blue-500/50 text-blue-500"
+                      : "border-gray-500/50 text-gray-500"
+                }
+              >
+                {bounty.status.charAt(0).toUpperCase() + bounty.status.slice(1)}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 Posted by {bounty.profiles?.display_name || "Anonymous"}
@@ -249,18 +355,87 @@ export default function BountyDetailPage() {
                   </div>
                   <Progress value={progress} className="h-3" />
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   {isCreator ? (
-                    <Button size="lg" asChild variant="default">
-                      <Link href={`/bounties/${bounty.id}/review`}>
-                        Review Submissions
-                      </Link>
-                    </Button>
+                    <>
+                      <Button size="lg" asChild variant="default">
+                        <Link href={`/bounties/${bounty.id}/review`}>
+                          Review Submissions
+                        </Link>
+                      </Button>
+                      {bounty.status === "active" && (
+                        <div className="flex gap-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isProcessing}
+                              >
+                                Complete Bounty
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Complete this bounty?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will mark the bounty as completed and stop accepting new
+                                  submissions. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCompleteBounty}>
+                                  Complete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={isProcessing}
+                              >
+                                Cancel Bounty
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel this bounty?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will cancel the bounty and stop accepting new submissions.
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Go Back</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleCancelBounty}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Cancel Bounty
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <Button size="lg" asChild>
-                      <Link href={`/bounties/${bounty.id}/submit`}>
-                        Submit Video
-                      </Link>
+                    <Button
+                      size="lg"
+                      asChild={bounty.status === "active"}
+                      disabled={bounty.status !== "active"}
+                    >
+                      {bounty.status === "active" ? (
+                        <Link href={`/bounties/${bounty.id}/submit`}>
+                          Submit Video
+                        </Link>
+                      ) : (
+                        <span>Submissions Closed</span>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -428,13 +603,24 @@ export default function BountyDetailPage() {
           {/* CTA */}
           {!isCreator && (
             <div className="mt-8 text-center">
-              <Button size="lg" asChild className="min-w-[200px]">
-                <Link href={`/bounties/${bounty.id}/submit`}>
-                  Submit Your Video
-                </Link>
+              <Button
+                size="lg"
+                asChild={bounty.status === "active"}
+                disabled={bounty.status !== "active"}
+                className="min-w-[200px]"
+              >
+                {bounty.status === "active" ? (
+                  <Link href={`/bounties/${bounty.id}/submit`}>
+                    Submit Your Video
+                  </Link>
+                ) : (
+                  <span>Submissions Closed</span>
+                )}
               </Button>
               <p className="mt-3 text-sm text-muted-foreground">
-                Connect your wallet to submit and receive instant payment
+                {bounty.status === "active"
+                  ? "Connect your wallet to submit and receive instant payment"
+                  : "This bounty is no longer accepting submissions"}
               </p>
             </div>
           )}

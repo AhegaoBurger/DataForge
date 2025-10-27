@@ -64,7 +64,7 @@ export default function BountyReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [qualityScores, setQualityScores] = useState<{ [key: string]: number }>(
-    {}
+    {},
   );
   const [blockchainTx, setBlockchainTx] = useState<string | null>(null);
 
@@ -128,7 +128,7 @@ export default function BountyReviewPage() {
             let filePath = sub.video_url;
 
             // If it's a full URL, extract the path after /videos/
-            if (filePath.includes('/storage/v1/object/')) {
+            if (filePath.includes("/storage/v1/object/")) {
               const match = filePath.match(/\/videos\/(.+)$/);
               if (match) {
                 filePath = match[1];
@@ -155,7 +155,7 @@ export default function BountyReviewPage() {
             // Last resort: use original URL
             return { ...sub, signedVideoUrl: sub.video_url };
           }
-        })
+        }),
       );
 
       setSubmissions(subsWithUrls);
@@ -170,7 +170,9 @@ export default function BountyReviewPage() {
     // For blockchain-backed bounties, require wallet connection
     if (bounty.is_blockchain_backed) {
       if (!wallet.connected || !wallet.publicKey) {
-        alert("Please connect your wallet to approve blockchain-backed submissions");
+        alert(
+          "Please connect your wallet to approve blockchain-backed submissions",
+        );
         return;
       }
 
@@ -195,16 +197,12 @@ export default function BountyReviewPage() {
       if (bounty.is_blockchain_backed) {
         const qualityScore = qualityScores[submission.id] || 80; // Default to 80
 
-        const txSignature = await approveSubmissionOnChain(
-          connection,
-          wallet,
-          {
-            submissionId: submission.on_chain_submission_address!.split("-")[0], // Extract submission ID
-            bountyId: bounty.on_chain_pool_address || bountyId,
-            contributorWallet: submission.profiles!.wallet_address!,
-            qualityScore,
-          }
-        );
+        const txSignature = await approveSubmissionOnChain(connection, wallet, {
+          submissionId: submission.on_chain_submission_address!.split("-")[0], // Extract submission ID
+          bountyId: bountyId, // Always use the UUID for PDA derivation
+          contributorWallet: submission.profiles!.wallet_address!,
+          qualityScore,
+        });
 
         console.log("Approval transaction:", txSignature);
         setBlockchainTx(txSignature);
@@ -233,7 +231,7 @@ export default function BountyReviewPage() {
             error: errorData.error,
           });
           throw new Error(
-            "Payment released on blockchain but database update failed. Please contact support."
+            "Payment released on blockchain but database update failed. Please contact support.",
           );
         }
         throw new Error(errorData.error || "Failed to approve submission");
@@ -245,7 +243,7 @@ export default function BountyReviewPage() {
       alert(
         bounty.is_blockchain_backed
           ? `Submission approved! Payment of ${bounty.reward_amount} SOL has been sent to the contributor.`
-          : "Submission approved!"
+          : "Submission approved!",
       );
     } catch (err: any) {
       console.error("Approval error:", err);
@@ -269,7 +267,9 @@ export default function BountyReviewPage() {
     // For blockchain-backed bounties, require wallet connection
     if (bounty.is_blockchain_backed) {
       if (!wallet.connected || !wallet.publicKey) {
-        alert("Please connect your wallet to reject blockchain-backed submissions");
+        alert(
+          "Please connect your wallet to reject blockchain-backed submissions",
+        );
         return;
       }
 
@@ -292,7 +292,7 @@ export default function BountyReviewPage() {
       if (bounty.is_blockchain_backed) {
         const txSignature = await rejectSubmissionOnChain(connection, wallet, {
           submissionId: submission.on_chain_submission_address!.split("-")[0], // Extract submission ID
-          bountyId: bounty.on_chain_pool_address || bountyId,
+          bountyId: bountyId, // Always use the UUID for PDA derivation
           contributorWallet: submission.profiles!.wallet_address!,
         });
 
@@ -319,7 +319,7 @@ export default function BountyReviewPage() {
       alert(
         bounty.is_blockchain_backed
           ? "Submission rejected. Funds returned to bounty pool."
-          : "Submission rejected."
+          : "Submission rejected.",
       );
     } catch (err: any) {
       console.error("Rejection error:", err);
@@ -375,8 +375,12 @@ export default function BountyReviewPage() {
   }
 
   const pendingSubmissions = submissions.filter((s) => s.status === "pending");
-  const approvedSubmissions = submissions.filter((s) => s.status === "approved");
-  const rejectedSubmissions = submissions.filter((s) => s.status === "rejected");
+  const approvedSubmissions = submissions.filter(
+    (s) => s.status === "approved",
+  );
+  const rejectedSubmissions = submissions.filter(
+    (s) => s.status === "rejected",
+  );
 
   return (
     <div className="min-h-screen">
@@ -460,8 +464,8 @@ export default function BountyReviewPage() {
             <Card className="mb-6 border-yellow-500/50 bg-yellow-500/10">
               <CardContent className="pt-6">
                 <p className="text-sm font-medium text-foreground">
-                  Please connect your wallet to approve or reject submissions for this
-                  blockchain-backed bounty.
+                  Please connect your wallet to approve or reject submissions
+                  for this blockchain-backed bounty.
                 </p>
               </CardContent>
             </Card>
@@ -489,7 +493,10 @@ export default function BountyReviewPage() {
                           )}
                           {submission.escrow_tx_signature && (
                             <a
-                              href={getExplorerUrl(submission.escrow_tx_signature, "devnet")}
+                              href={getExplorerUrl(
+                                submission.escrow_tx_signature,
+                                "devnet",
+                              )}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-blue-400 hover:text-blue-300 underline"
@@ -498,7 +505,10 @@ export default function BountyReviewPage() {
                             </a>
                           )}
                         </div>
-                        <Badge variant="outline" className="border-yellow-600 text-yellow-600">
+                        <Badge
+                          variant="outline"
+                          className="border-yellow-600 text-yellow-600"
+                        >
                           Pending
                         </Badge>
                       </div>
@@ -515,7 +525,9 @@ export default function BountyReviewPage() {
                             />
                           ) : (
                             <div className="w-full max-w-2xl rounded-lg border p-8 text-center bg-muted">
-                              <p className="text-muted-foreground">Loading video...</p>
+                              <p className="text-muted-foreground">
+                                Loading video...
+                              </p>
                             </div>
                           )}
                         </div>
@@ -528,7 +540,11 @@ export default function BountyReviewPage() {
                           {submission.metadata?.file_size && (
                             <p>
                               Size:{" "}
-                              {(submission.metadata.file_size / 1024 / 1024).toFixed(2)}{" "}
+                              {(
+                                submission.metadata.file_size /
+                                1024 /
+                                1024
+                              ).toFixed(2)}{" "}
                               MB
                             </p>
                           )}
@@ -538,8 +554,12 @@ export default function BountyReviewPage() {
                           </p>
                           {submission.metadata?.notes && (
                             <div className="mt-2 p-3 bg-muted rounded">
-                              <p className="font-medium">Notes from contributor:</p>
-                              <p className="mt-1">{submission.metadata.notes}</p>
+                              <p className="font-medium">
+                                Notes from contributor:
+                              </p>
+                              <p className="mt-1">
+                                {submission.metadata.notes}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -559,14 +579,16 @@ export default function BountyReviewPage() {
                               onChange={(e) =>
                                 setQualityScores({
                                   ...qualityScores,
-                                  [submission.id]: parseInt(e.target.value) || 0,
+                                  [submission.id]:
+                                    parseInt(e.target.value) || 0,
                                 })
                               }
                               className="max-w-xs"
                               placeholder="80"
                             />
                             <p className="text-xs text-muted-foreground">
-                              This score is recorded on-chain for reputation tracking
+                              This score is recorded on-chain for reputation
+                              tracking
                             </p>
                           </div>
                         )}
@@ -577,7 +599,8 @@ export default function BountyReviewPage() {
                             onClick={() => handleApprove(submission)}
                             disabled={
                               processingId === submission.id ||
-                              (bounty?.is_blockchain_backed && !wallet.connected)
+                              (bounty?.is_blockchain_backed &&
+                                !wallet.connected)
                             }
                             className="bg-green-600 hover:bg-green-700"
                           >
@@ -613,11 +636,14 @@ export default function BountyReviewPage() {
                             onClick={() => handleReject(submission)}
                             disabled={
                               processingId === submission.id ||
-                              (bounty?.is_blockchain_backed && !wallet.connected)
+                              (bounty?.is_blockchain_backed &&
+                                !wallet.connected)
                             }
                             variant="destructive"
                           >
-                            {processingId === submission.id ? "Processing..." : "Reject"}
+                            {processingId === submission.id
+                              ? "Processing..."
+                              : "Reject"}
                           </Button>
                         </div>
                       </div>
@@ -645,7 +671,10 @@ export default function BountyReviewPage() {
                           </CardTitle>
                           {submission.payout_tx_signature && (
                             <a
-                              href={getExplorerUrl(submission.payout_tx_signature, "devnet")}
+                              href={getExplorerUrl(
+                                submission.payout_tx_signature,
+                                "devnet",
+                              )}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs text-green-400 hover:text-green-300 underline"
@@ -667,18 +696,22 @@ export default function BountyReviewPage() {
                           />
                         ) : (
                           <div className="w-full max-w-2xl rounded-lg border p-8 text-center bg-muted">
-                            <p className="text-muted-foreground">Loading video...</p>
+                            <p className="text-muted-foreground">
+                              Loading video...
+                            </p>
                           </div>
                         )}
                         <p className="text-sm text-muted-foreground">
                           Approved on{" "}
                           {new Date(submission.created_at).toLocaleString()}
                         </p>
-                        {submission.payout_tx_signature && bounty?.is_blockchain_backed && (
-                          <p className="text-sm text-green-600">
-                            Payment of {bounty.reward_amount} SOL sent on-chain
-                          </p>
-                        )}
+                        {submission.payout_tx_signature &&
+                          bounty?.is_blockchain_backed && (
+                            <p className="text-sm text-green-600">
+                              Payment of {bounty.reward_amount} SOL sent
+                              on-chain
+                            </p>
+                          )}
                       </div>
                     </CardContent>
                   </Card>
@@ -721,7 +754,8 @@ export default function BountyReviewPage() {
             <Card>
               <CardContent className="p-12 text-center">
                 <p className="text-muted-foreground">
-                  No submissions yet. Share your bounty link to get contributors!
+                  No submissions yet. Share your bounty link to get
+                  contributors!
                 </p>
               </CardContent>
             </Card>

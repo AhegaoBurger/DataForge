@@ -76,15 +76,29 @@ export async function PUT(
     updateData.payout_tx_signature = payout_tx_signature
   }
 
-  const { data: updatedSubmission, error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from("submissions")
     .update(updateData)
     .eq("id", id)
-    .select()
-    .single()
 
   if (updateError) {
+    console.error("Submission update error:", updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 })
+  }
+
+  // Fetch the updated submission separately to avoid trigger issues
+  const { data: updatedSubmission, error: refetchError } = await supabase
+    .from("submissions")
+    .select("id, status, payout_tx_signature, updated_at")
+    .eq("id", id)
+    .single()
+
+  if (refetchError) {
+    console.error("Submission fetch error after update:", refetchError);
+    // Return success even if fetch fails - the update succeeded
+    return NextResponse.json({
+      submission: { id, status: updateData.status, payout_tx_signature: updateData.payout_tx_signature }
+    })
   }
 
   // Note: The trigger handle_submission_approval() will automatically

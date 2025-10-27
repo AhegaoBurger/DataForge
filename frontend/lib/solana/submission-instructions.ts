@@ -188,19 +188,48 @@ export async function approveSubmissionOnChain(
   const contributorPubkey = new PublicKey(params.contributorWallet);
   const [contributorProfilePDA] = getProfilePDA(contributorPubkey);
 
-  const tx = await program.methods
-    .approveSubmission(params.qualityScore)
-    .accountsPartial({
-      submission: submissionPDA,
-      bountyPool: bountyPDA,
-      contributorProfile: contributorProfilePDA,
-      contributor: contributorPubkey,
-      authority: wallet.publicKey,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+  // Check if submission is already approved
+  try {
+    const submissionAccount = await program.account.videoSubmission.fetch(submissionPDA);
+    if (submissionAccount.status.approved) {
+      throw new Error("This submission has already been approved on-chain. Please refresh the page and update the database status manually if needed.");
+    }
+  } catch (error: any) {
+    // If we can't fetch the account, it might not exist - let the transaction fail with a better error
+    if (!error.message?.includes("already been approved")) {
+      console.warn("Could not check submission status:", error);
+    } else {
+      throw error;
+    }
+  }
 
-  return tx;
+  try {
+    const tx = await program.methods
+      .approveSubmission(params.qualityScore)
+      .accountsPartial({
+        submission: submissionPDA,
+        bountyPool: bountyPDA,
+        contributorProfile: contributorProfilePDA,
+        contributor: contributorPubkey,
+        authority: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    return tx;
+  } catch (error: any) {
+    console.error("Approval transaction error:", error);
+
+    // Provide more helpful error messages
+    if (error.message?.includes("already been processed")) {
+      throw new Error("Transaction already processed. This submission may already be approved.");
+    }
+    if (error.message?.includes("InvalidStatus")) {
+      throw new Error("Cannot approve: submission has already been approved or rejected on-chain.");
+    }
+
+    throw error;
+  }
 }
 
 export interface RejectSubmissionParams {

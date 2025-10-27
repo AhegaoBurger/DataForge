@@ -310,6 +310,7 @@ export default function SubmitVideoPage() {
           bounty_id: bountyId,
           video_url: videoPath,
           metadata,
+          submission_id: submissionId, // Store blockchain submission ID for PDA derivation
           on_chain_submission_address: blockchainResult.submissionPDA,
           escrow_tx_signature: blockchainResult.signature,
         }),

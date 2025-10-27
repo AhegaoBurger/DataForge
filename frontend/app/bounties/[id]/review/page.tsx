@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 
 interface Bounty {
   id: string;
+  bounty_id?: string; // Blockchain UUID for PDA derivation
   creator_id: string;
   title: string;
   reward_amount: number;
@@ -45,6 +46,7 @@ interface Submission {
     wallet_address?: string | null;
   };
   signedVideoUrl?: string;
+  submission_id?: string;
   on_chain_submission_address?: string;
   escrow_tx_signature?: string;
   payout_tx_signature?: string;
@@ -181,8 +183,8 @@ export default function BountyReviewPage() {
         return;
       }
 
-      if (!submission.on_chain_submission_address) {
-        alert("This submission does not have an on-chain address");
+      if (!submission.submission_id || !submission.on_chain_submission_address) {
+        alert("This submission does not have blockchain data (submission_id or on-chain address missing)");
         return;
       }
     }
@@ -195,11 +197,16 @@ export default function BountyReviewPage() {
 
       // STEP 1: Approve on blockchain (if blockchain-backed)
       if (bounty.is_blockchain_backed) {
+        if (!bounty.bounty_id) {
+          alert("Bounty blockchain ID not found");
+          return;
+        }
+
         const qualityScore = qualityScores[submission.id] || 80; // Default to 80
 
         const txSignature = await approveSubmissionOnChain(connection, wallet, {
-          submissionId: submission.on_chain_submission_address!.split("-")[0], // Extract submission ID
-          bountyId: bountyId, // Always use the UUID for PDA derivation
+          submissionId: submission.submission_id!, // Use stored blockchain submission ID
+          bountyId: bounty.bounty_id, // Use blockchain UUID for PDA derivation
           contributorWallet: submission.profiles!.wallet_address!,
           qualityScore,
         });
@@ -278,8 +285,8 @@ export default function BountyReviewPage() {
         return;
       }
 
-      if (!submission.on_chain_submission_address) {
-        alert("This submission does not have an on-chain address");
+      if (!submission.submission_id || !submission.on_chain_submission_address) {
+        alert("This submission does not have blockchain data (submission_id or on-chain address missing)");
         return;
       }
     }
@@ -290,9 +297,14 @@ export default function BountyReviewPage() {
     try {
       // STEP 1: Reject on blockchain (if blockchain-backed)
       if (bounty.is_blockchain_backed) {
+        if (!bounty.bounty_id) {
+          alert("Bounty blockchain ID not found");
+          return;
+        }
+
         const txSignature = await rejectSubmissionOnChain(connection, wallet, {
-          submissionId: submission.on_chain_submission_address!.split("-")[0], // Extract submission ID
-          bountyId: bountyId, // Always use the UUID for PDA derivation
+          submissionId: submission.submission_id!, // Use stored blockchain submission ID
+          bountyId: bounty.bounty_id, // Use blockchain UUID for PDA derivation
           contributorWallet: submission.profiles!.wallet_address!,
         });
 

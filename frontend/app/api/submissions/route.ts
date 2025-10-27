@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     bounty_id,
     video_url,
     metadata,
+    submission_id,
     on_chain_submission_address,
     escrow_tx_signature,
   } = body;
@@ -92,11 +93,11 @@ export async function POST(request: Request) {
 
   // For blockchain-backed bounties, require blockchain fields
   if (bounty.is_blockchain_backed) {
-    if (!on_chain_submission_address || !escrow_tx_signature) {
+    if (!submission_id || !on_chain_submission_address || !escrow_tx_signature) {
       return NextResponse.json(
         {
           error:
-            "Blockchain-backed bounties require on_chain_submission_address and escrow_tx_signature",
+            "Blockchain-backed bounties require submission_id, on_chain_submission_address and escrow_tx_signature",
         },
         { status: 400 },
       );
@@ -127,6 +128,7 @@ export async function POST(request: Request) {
       video_url,
       metadata: metadata || {},
       status: "pending",
+      submission_id: submission_id || null,
       on_chain_submission_address: on_chain_submission_address || null,
       escrow_tx_signature: escrow_tx_signature || null,
     })

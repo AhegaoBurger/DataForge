@@ -195,9 +195,8 @@ export default function BountiesPage() {
 
       // STEP 1: Create bounty on blockchain
       setIsBlockchainStep(true);
-      // Use timestamp + random chars for unique ID (max 32 bytes for PDA seed)
-      // Adding more randomness to prevent collisions
-      const bountyId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      // Generate a proper UUID for bounty ID (required for PDA derivation)
+      const bountyId = uuidv4();
       const expiresAt = formData.deadline
         ? new Date(formData.deadline)
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days default

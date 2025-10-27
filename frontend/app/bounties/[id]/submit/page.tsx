@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +72,9 @@ export default function SubmitVideoPage() {
   const supabase = createClient();
   const { connection } = useConnection();
   const wallet = useWallet();
+
+  // Use ref to prevent race conditions with concurrent submissions
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     checkProfile();
@@ -196,13 +199,24 @@ export default function SubmitVideoPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // CRITICAL: Prevent concurrent submissions using ref
+    if (isSubmittingRef.current) {
+      console.warn("⚠️ DUPLICATE SUBMISSION BLOCKED - handleSubmit called while already in progress");
+      return;
+    }
+
+    console.log("✅ Starting video submission - lock acquired");
+    isSubmittingRef.current = true;
+
     // Validation checks
     if (!wallet.connected || !wallet.publicKey) {
       alert("Please connect your wallet first");
+      isSubmittingRef.current = false;
       return;
     }
     if (!profile?.wallet_address) {
       alert("Please link your wallet in your profile first");
+      isSubmittingRef.current = false;
       return;
     }
     // Verify wallet match
@@ -210,20 +224,24 @@ export default function SubmitVideoPage() {
       alert(
         "The connected wallet doesn't match your profile wallet. Please connect the correct wallet or update your profile."
       );
+      isSubmittingRef.current = false;
       return;
     }
     if (!hasOnChainProfile) {
       alert(
         "Please initialize your on-chain profile first by clicking the button above"
       );
+      isSubmittingRef.current = false;
       return;
     }
     if (!videoFile) {
       alert("Please select a video file");
+      isSubmittingRef.current = false;
       return;
     }
     if (!bounty?.bounty_id) {
       alert("Bounty blockchain ID not found. Please try again.");
+      isSubmittingRef.current = false;
       return;
     }
 
@@ -338,6 +356,8 @@ export default function SubmitVideoPage() {
       alert(errorMessage);
     } finally {
       setUploading(false);
+      isSubmittingRef.current = false;
+      console.log("🔓 Video submission lock released");
     }
   };
 

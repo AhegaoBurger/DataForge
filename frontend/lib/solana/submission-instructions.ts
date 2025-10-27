@@ -1,4 +1,4 @@
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { getProgramWithWallet } from "./program";
 import { getBountyPDA, getProfilePDA, getSubmissionPDA } from "./utils";
 
@@ -28,6 +28,25 @@ export async function submitVideoOnChain(
   const [submissionPDA] = getSubmissionPDA(params.submissionId);
   const [bountyPDA] = getBountyPDA(params.bountyId);
 
+  // Check if this submission PDA already exists
+  console.log("Checking if submission PDA exists:", submissionPDA.toString());
+  try {
+    const existingAccount = await connection.getAccountInfo(submissionPDA);
+    if (existingAccount) {
+      console.error("Submission PDA already exists on-chain!");
+      throw new Error(
+        `Submission with ID "${params.submissionId}" already exists on-chain. Please try again.`
+      );
+    }
+    console.log("Submission PDA is available (account does not exist)");
+  } catch (error: any) {
+    if (error.message?.includes("already exists")) {
+      throw error;
+    }
+    // Other errors (like network errors) are okay - we'll proceed
+    console.log("PDA check inconclusive, proceeding with transaction");
+  }
+
   // Convert submission ID to 16-byte array
   // Submission IDs are timestamp-based strings, so we need to pad them
   const encoder = new TextEncoder();
@@ -37,26 +56,115 @@ export async function submitVideoOnChain(
   paddedBytes.set(idBytes.slice(0, copyLength));
   const submissionIdArray = Array.from(paddedBytes);
 
-  const tx = await program.methods
-    .submitVideo(
-      submissionIdArray,
-      params.ipfsHash,
-      params.arweaveTx,
-      params.metadataUri
-    )
-    .accountsPartial({
-      submission: submissionPDA,
-      bountyPool: bountyPDA,
-      contributor: wallet.publicKey,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+  try {
+    // CRITICAL: Get FRESH blockhash for each transaction attempt
+    // This ensures retries don't reuse the same transaction signature
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    console.log("Creating transaction with fresh blockhash:", blockhash.slice(0, 8) + "...");
 
-  return {
-    signature: tx,
-    submissionPDA: submissionPDA.toString(),
-    submissionId: params.submissionId,
-  };
+    // Build the transaction instruction
+    const instruction = await program.methods
+      .submitVideo(
+        submissionIdArray,
+        params.ipfsHash,
+        params.arweaveTx,
+        params.metadataUri
+      )
+      .accountsPartial({
+        submission: submissionPDA,
+        bountyPool: bountyPDA,
+        contributor: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    // Build transaction with explicit blockhash
+    const transaction = new Transaction();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    // Add memo instruction with timestamp to ensure transaction uniqueness
+    // This prevents wallet caching and ensures each attempt is unique
+    const timestamp = Date.now();
+    const memoData = Buffer.from(`TerraTrain Video Submission: ${timestamp}`, 'utf-8');
+    const memoInstruction = new TransactionInstruction({
+      keys: [],
+      programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'), // Memo program
+      data: memoData,
+    });
+
+    transaction.add(memoInstruction);
+    transaction.add(instruction);
+
+    console.log("Transaction uniqueness timestamp:", timestamp);
+    console.log("Transaction details:", {
+      blockhash: blockhash.slice(0, 12) + "...",
+      feePayer: wallet.publicKey.toString().slice(0, 12) + "...",
+      instructionCount: transaction.instructions.length,
+      memoData: memoData.toString().slice(0, 50) + "...",
+    });
+
+    // Sign and send the transaction
+    console.log("Requesting wallet signature...");
+    console.log("Wallet adapter name:", wallet.adapter?.name);
+
+    // CRITICAL: Use wallet.sendTransaction to prevent double-sending
+    // Some wallets (like Phantom) auto-send after signTransaction, causing duplicate submissions
+    let signature: string;
+
+    if (wallet.sendTransaction) {
+      console.log("Using wallet.sendTransaction (wallet will handle signing and sending)");
+      signature = await wallet.sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        maxRetries: 0, // Don't retry - we handle retries at higher level
+      });
+    } else {
+      console.log("Using manual signing + sendRawTransaction");
+      const signedTx = await wallet.signTransaction(transaction);
+      signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        maxRetries: 0,
+      });
+    }
+
+    console.log("Transaction sent:", signature);
+
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log("Transaction confirmed:", signature);
+
+    return {
+      signature,
+      submissionPDA: submissionPDA.toString(),
+      submissionId: params.submissionId,
+    };
+  } catch (error: any) {
+    console.error("Submit video transaction failed:", error);
+
+    // Enhanced error logging for debugging
+    if (error.logs) {
+      console.error("Transaction logs:", error.logs);
+    }
+    if (error.signature) {
+      console.error("Failed transaction signature:", error.signature);
+    }
+
+    // Provide more helpful error messages
+    if (error.message?.includes("already been processed")) {
+      throw new Error(
+        "Transaction was already processed. This submission may already exist. Please refresh the page and try again."
+      );
+    }
+
+    throw error;
+  }
 }
 
 export interface ApproveSubmissionParams {

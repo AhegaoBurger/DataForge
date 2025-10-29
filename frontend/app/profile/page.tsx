@@ -25,7 +25,7 @@ import {
   fetchProfileData,
   syncReputationToDatabase,
 } from "@/lib/solana/profile-instructions";
-import { getProfilePDA, getExplorerAddressUrl } from "@/lib/solana/utils";
+import { getProfilePDA, getExplorerAddressUrl, shortenAddress } from "@/lib/solana/utils";
 
 interface UserProfile {
   id: string;
@@ -614,200 +614,208 @@ export default function ProfilePage() {
 
               {/* On-Chain Profile Status */}
               {profile?.wallet_address && connected && publicKey?.toString() === profile.wallet_address && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>On-Chain Profile</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {checkingOnChainProfile ? (
-                      <div className="flex items-center justify-center py-6">
-                        <svg
-                          className="animate-spin h-8 w-8 text-primary"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                      </div>
-                    ) : hasOnChainProfile && profile.on_chain_profile_address ? (
-                      // Profile exists on-chain AND saved in DB
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Status
-                          </Label>
-                          <p className="mt-1 text-sm text-green-600 flex items-center gap-2">
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
+                <>
+                  {checkingOnChainProfile ? (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-center py-6">
+                          <svg
+                            className="animate-spin h-8 w-8 text-primary"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
                               stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                            On-chain profile initialized and synced
-                          </p>
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
                         </div>
+                      </CardContent>
+                    </Card>
+                  ) : hasOnChainProfile && profile.on_chain_profile_address ? (
+                    // Profile exists on-chain AND saved in DB - GREEN CARD
+                    <Card className="border-green-500/20 bg-green-500/5">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <svg
+                            className="h-5 w-5 text-green-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          On-Chain Profile Active
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Your contributor profile is stored on Solana blockchain. Stats and reputation are tracked immutably on-chain.
+                        </p>
 
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Profile PDA Address
-                          </Label>
-                          <div className="mt-1 flex items-center gap-2">
-                            <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-xs break-all">
-                              {profile.on_chain_profile_address}
-                            </code>
+                        <div className="flex flex-col gap-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Profile PDA: </span>
+                            <a
+                              href={getExplorerAddressUrl(profile.on_chain_profile_address, "devnet")}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-green-400 hover:text-green-300 underline font-mono text-xs"
+                            >
+                              {shortenAddress(profile.on_chain_profile_address, 6)} →
+                            </a>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
+                              className="ml-2 h-6 px-2"
                               onClick={() =>
                                 navigator.clipboard.writeText(
                                   profile.on_chain_profile_address || ""
                                 )
                               }
                             >
-                              Copy
+                              <svg
+                                className="h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                              </svg>
                             </Button>
                           </div>
                         </div>
 
-                        <div>
-                          <a
-                            href={getExplorerAddressUrl(
-                              profile.on_chain_profile_address,
-                              "devnet"
-                            )}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            View on Solana Explorer
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </a>
-                        </div>
-
-                        <Separator />
-
-                        <div>
-                          <Label className="text-xs text-muted-foreground mb-2 block">
-                            Sync Reputation Data
-                          </Label>
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Pull your latest reputation stats (submissions, earnings, scores) from the blockchain to update your profile.
-                          </p>
+                        <div className="pt-2 border-t border-green-500/20">
+                          <div className="grid grid-cols-3 gap-4 mb-3">
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Submissions</p>
+                              <p className="text-lg font-bold text-green-400">
+                                {profile.total_submissions || 0}
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Earnings</p>
+                              <p className="text-lg font-bold text-green-400">
+                                {profile.total_earnings || 0} SOL
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Reputation</p>
+                              <p className="text-lg font-bold text-green-400">
+                                {profile.reputation_score || 0}
+                              </p>
+                            </div>
+                          </div>
                           <Button
                             variant="outline"
+                            size="sm"
                             className="w-full"
                             onClick={handleSyncReputation}
                             disabled={syncingReputation}
                           >
-                            {syncingReputation ? "Syncing..." : "Sync from Blockchain"}
+                            {syncingReputation ? "Syncing..." : "↻ Sync Latest Stats from Blockchain"}
                           </Button>
                         </div>
-                      </div>
-                    ) : hasOnChainProfile && !profile.on_chain_profile_address ? (
-                      // Profile exists on-chain but NOT saved in DB (needs sync)
-                      <div className="space-y-4">
-                        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
-                          <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                            <svg
-                              className="h-5 w-5 text-yellow-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                              />
-                            </svg>
-                            Profile Needs Sync
-                          </p>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Your on-chain profile exists but isn't linked to your database profile. Click below to sync it.
-                          </p>
-                          <Button
-                            onClick={handleSyncProfilePDA}
-                            disabled={checkingOnChainProfile}
-                            className="w-full"
+                      </CardContent>
+                    </Card>
+                  ) : hasOnChainProfile && !profile.on_chain_profile_address ? (
+                    // Profile exists on-chain but NOT saved in DB - YELLOW CARD
+                    <Card className="border-yellow-500/20 bg-yellow-500/5">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <svg
+                            className="h-5 w-5 text-yellow-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            {checkingOnChainProfile
-                              ? "Syncing..."
-                              : "Sync Profile to Database"}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Profile does NOT exist on-chain (needs initialization)
-                      <div className="space-y-4">
-                        <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                          <div className="mb-4">
-                            <svg
-                              className="mx-auto h-12 w-12 text-muted-foreground"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                              />
-                            </svg>
-                          </div>
-                          <p className="text-sm font-medium text-foreground mb-2">
-                            No On-Chain Profile
-                          </p>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Initialize your on-chain contributor profile to submit videos and receive payments. This is a one-time setup (~0.001 SOL fee).
-                          </p>
-                          <Button
-                            onClick={handleInitializeProfile}
-                            disabled={checkingOnChainProfile}
-                            className="w-full"
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          Profile Needs Sync
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Your on-chain profile exists on Solana but isn't linked to your database profile. Sync it now to enable full functionality.
+                        </p>
+                        <Button
+                          onClick={handleSyncProfilePDA}
+                          disabled={checkingOnChainProfile}
+                          className="w-full"
+                        >
+                          {checkingOnChainProfile
+                            ? "Syncing..."
+                            : "Sync Profile to Database"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    // Profile does NOT exist on-chain - BLUE CARD
+                    <Card className="border-blue-500/20 bg-blue-500/5">
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <svg
+                            className="h-5 w-5 text-blue-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            {checkingOnChainProfile
-                              ? "Initializing..."
-                              : "Initialize On-Chain Profile"}
-                          </Button>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            />
+                          </svg>
+                          Initialize On-Chain Profile
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Create your contributor profile on Solana blockchain to submit videos and receive payments. Your reputation and earnings will be tracked immutably on-chain.
+                        </p>
+                        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3">
+                          <p className="text-xs text-muted-foreground">
+                            <strong>One-time setup fee:</strong> ~0.001 SOL for account rent
+                          </p>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        <Button
+                          onClick={handleInitializeProfile}
+                          disabled={checkingOnChainProfile}
+                          className="w-full"
+                        >
+                          {checkingOnChainProfile
+                            ? "Initializing..."
+                            : "Initialize Profile on Blockchain"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
 
               {/* Wallet Linking */}

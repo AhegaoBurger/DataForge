@@ -204,7 +204,12 @@ export async function approveSubmissionOnChain(
   }
 
   try {
-    const tx = await program.methods
+    // CRITICAL: Get FRESH blockhash for each transaction attempt
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    console.log("Creating approval transaction with fresh blockhash:", blockhash.slice(0, 8) + "...");
+
+    // Build the transaction instruction
+    const instruction = await program.methods
       .approveSubmission(params.qualityScore)
       .accountsPartial({
         submission: submissionPDA,
@@ -214,11 +219,114 @@ export async function approveSubmissionOnChain(
         authority: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
-      .rpc();
+      .instruction();
 
-    return tx;
+    // Build transaction with explicit blockhash
+    const transaction = new Transaction();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    // Add memo instruction with timestamp to ensure transaction uniqueness
+    const timestamp = Date.now();
+    const memoData = Buffer.from(`TerraTrain Approval: ${timestamp}`, 'utf-8');
+    const memoInstruction = new TransactionInstruction({
+      keys: [],
+      programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'), // Memo program
+      data: memoData,
+    });
+
+    transaction.add(memoInstruction);
+    transaction.add(instruction);
+
+    console.log("Transaction uniqueness timestamp:", timestamp);
+    console.log("Transaction details:", {
+      blockhash: blockhash.slice(0, 12) + "...",
+      feePayer: wallet.publicKey.toString().slice(0, 12) + "...",
+      instructionCount: transaction.instructions.length,
+    });
+
+    // Simulate transaction first to catch errors early
+    try {
+      console.log("Simulating approval transaction...");
+      const simulation = await connection.simulateTransaction(transaction);
+      console.log("Simulation result:", simulation);
+
+      if (simulation.value.err) {
+        console.error("Transaction simulation failed:", simulation.value.err);
+        console.error("Simulation logs:", simulation.value.logs);
+        throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+      }
+    } catch (simError: any) {
+      console.error("Simulation error:", simError);
+      // Continue anyway - simulation might fail for various reasons
+      if (simError.message?.includes("simulation failed")) {
+        throw simError; // Don't continue if simulation explicitly failed
+      }
+    }
+
+    // Sign and send the transaction
+    console.log("Requesting wallet signature...");
+    console.log("Wallet details:", {
+      hasWallet: !!wallet,
+      hasSendTransaction: !!wallet?.sendTransaction,
+      hasSignTransaction: !!wallet?.signTransaction,
+      publicKey: wallet?.publicKey?.toString(),
+    });
+
+    let signature: string;
+
+    try {
+      // Try using signTransaction first (more compatible)
+      if (wallet.signTransaction) {
+        console.log("Using wallet.signTransaction + sendRawTransaction");
+        const signedTx = await wallet.signTransaction(transaction);
+        signature = await connection.sendRawTransaction(signedTx.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+          maxRetries: 0,
+        });
+      } else if (wallet.sendTransaction) {
+        console.log("Using wallet.sendTransaction (wallet will handle signing and sending)");
+        signature = await wallet.sendTransaction(transaction, connection, {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+          maxRetries: 0,
+        });
+      } else {
+        throw new Error("Wallet does not support signing transactions");
+      }
+    } catch (signError: any) {
+      console.error("Transaction signing failed:", signError);
+      console.error("Error details:", {
+        name: signError.name,
+        message: signError.message,
+        stack: signError.stack,
+      });
+      throw signError;
+    }
+
+    console.log("Approval transaction sent:", signature);
+
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log("Approval transaction confirmed:", signature);
+
+    return signature;
   } catch (error: any) {
     console.error("Approval transaction error:", error);
+
+    // Enhanced error logging
+    if (error.logs) {
+      console.error("Transaction logs:", error.logs);
+    }
+    if (error.signature) {
+      console.error("Failed transaction signature:", error.signature);
+    }
 
     // Provide more helpful error messages
     if (error.message?.includes("already been processed")) {
@@ -226,6 +334,9 @@ export async function approveSubmissionOnChain(
     }
     if (error.message?.includes("InvalidStatus")) {
       throw new Error("Cannot approve: submission has already been approved or rejected on-chain.");
+    }
+    if (error.message?.includes("User rejected")) {
+      throw new Error("Transaction was cancelled by user.");
     }
 
     throw error;
@@ -252,19 +363,144 @@ export async function rejectSubmissionOnChain(
   const contributorPubkey = new PublicKey(params.contributorWallet);
   const [contributorProfilePDA] = getProfilePDA(contributorPubkey);
 
-  const tx = await program.methods
-    .rejectSubmission()
-    .accountsPartial({
-      submission: submissionPDA,
-      bountyPool: bountyPDA,
-      contributorProfile: contributorProfilePDA,
-      contributor: contributorPubkey,
-      authority: wallet.publicKey,
-      systemProgram: SystemProgram.programId,
-    })
-    .rpc();
+  try {
+    // CRITICAL: Get FRESH blockhash for each transaction attempt
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    console.log("Creating rejection transaction with fresh blockhash:", blockhash.slice(0, 8) + "...");
 
-  return tx;
+    // Build the transaction instruction
+    const instruction = await program.methods
+      .rejectSubmission()
+      .accountsPartial({
+        submission: submissionPDA,
+        bountyPool: bountyPDA,
+        contributorProfile: contributorProfilePDA,
+        contributor: contributorPubkey,
+        authority: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    // Build transaction with explicit blockhash
+    const transaction = new Transaction();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = wallet.publicKey;
+
+    // Add memo instruction with timestamp to ensure transaction uniqueness
+    const timestamp = Date.now();
+    const memoData = Buffer.from(`TerraTrain Rejection: ${timestamp}`, 'utf-8');
+    const memoInstruction = new TransactionInstruction({
+      keys: [],
+      programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'), // Memo program
+      data: memoData,
+    });
+
+    transaction.add(memoInstruction);
+    transaction.add(instruction);
+
+    console.log("Transaction uniqueness timestamp:", timestamp);
+    console.log("Transaction details:", {
+      blockhash: blockhash.slice(0, 12) + "...",
+      feePayer: wallet.publicKey.toString().slice(0, 12) + "...",
+      instructionCount: transaction.instructions.length,
+    });
+
+    // Simulate transaction first to catch errors early
+    try {
+      console.log("Simulating rejection transaction...");
+      const simulation = await connection.simulateTransaction(transaction);
+      console.log("Simulation result:", simulation);
+
+      if (simulation.value.err) {
+        console.error("Transaction simulation failed:", simulation.value.err);
+        console.error("Simulation logs:", simulation.value.logs);
+        throw new Error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+      }
+    } catch (simError: any) {
+      console.error("Simulation error:", simError);
+      // Continue anyway - simulation might fail for various reasons
+      if (simError.message?.includes("simulation failed")) {
+        throw simError; // Don't continue if simulation explicitly failed
+      }
+    }
+
+    // Sign and send the transaction
+    console.log("Requesting wallet signature...");
+    console.log("Wallet details:", {
+      hasWallet: !!wallet,
+      hasSendTransaction: !!wallet?.sendTransaction,
+      hasSignTransaction: !!wallet?.signTransaction,
+      publicKey: wallet?.publicKey?.toString(),
+    });
+
+    let signature: string;
+
+    try {
+      // Try using signTransaction first (more compatible)
+      if (wallet.signTransaction) {
+        console.log("Using wallet.signTransaction + sendRawTransaction");
+        const signedTx = await wallet.signTransaction(transaction);
+        signature = await connection.sendRawTransaction(signedTx.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+          maxRetries: 0,
+        });
+      } else if (wallet.sendTransaction) {
+        console.log("Using wallet.sendTransaction (wallet will handle signing and sending)");
+        signature = await wallet.sendTransaction(transaction, connection, {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+          maxRetries: 0,
+        });
+      } else {
+        throw new Error("Wallet does not support signing transactions");
+      }
+    } catch (signError: any) {
+      console.error("Transaction signing failed:", signError);
+      console.error("Error details:", {
+        name: signError.name,
+        message: signError.message,
+        stack: signError.stack,
+      });
+      throw signError;
+    }
+
+    console.log("Rejection transaction sent:", signature);
+
+    // Wait for confirmation
+    await connection.confirmTransaction({
+      signature,
+      blockhash,
+      lastValidBlockHeight,
+    }, 'confirmed');
+
+    console.log("Rejection transaction confirmed:", signature);
+
+    return signature;
+  } catch (error: any) {
+    console.error("Rejection transaction error:", error);
+
+    // Enhanced error logging
+    if (error.logs) {
+      console.error("Transaction logs:", error.logs);
+    }
+    if (error.signature) {
+      console.error("Failed transaction signature:", error.signature);
+    }
+
+    // Provide more helpful error messages
+    if (error.message?.includes("already been processed")) {
+      throw new Error("Transaction already processed. This submission may already be rejected.");
+    }
+    if (error.message?.includes("InvalidStatus")) {
+      throw new Error("Cannot reject: submission has already been approved or rejected on-chain.");
+    }
+    if (error.message?.includes("User rejected")) {
+      throw new Error("Transaction was cancelled by user.");
+    }
+
+    throw error;
+  }
 }
 
 /**

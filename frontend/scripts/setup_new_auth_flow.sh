@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# DataVault - New Authentication Flow Setup Script
+# DataForge - New Authentication Flow Setup Script
 # This script sets up all necessary database changes for the new auth flow
 
 set -e
 
-echo "🚀 Setting up DataVault New Authentication Flow..."
+echo "🚀 Setting up DataForge New Authentication Flow..."
 echo "=================================================="
 
 # Colors for output

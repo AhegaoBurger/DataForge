@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "DataVault - Decentralized Robotics Training Data Marketplace",
+  title: "DataForge - Decentralized Robotics Training Data Marketplace",
   description:
     "Turn your smartphone into a data collection device. Earn cryptocurrency for capturing videos of everyday tasks. Built on Solana.",
   generator: "v0.app",

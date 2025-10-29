@@ -92,7 +92,7 @@ export function Navigation() {
                   />
                 </svg>
               </div>
-              <span className="text-lg font-bold">DataVault</span>
+              <span className="text-lg font-bold">DataForge</span>
             </Link>
           </div>
           <div className="h-8 w-20 animate-pulse rounded-lg bg-muted" />
@@ -121,7 +121,7 @@ export function Navigation() {
                 />
               </svg>
             </div>
-            <span className="text-lg font-bold">DataVault</span>
+            <span className="text-lg font-bold">DataForge</span>
           </Link>
 
           <div className="hidden items-center gap-6 md:flex">

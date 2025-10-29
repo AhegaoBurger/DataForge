@@ -92,7 +92,7 @@ export default function LoginPage() {
                 />
               </svg>
             </div>
-            <span className="text-lg font-bold">DataVault</span>
+            <span className="text-lg font-bold">DataForge</span>
           </Link>
           <h1 className="mt-6 text-3xl font-bold">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -168,7 +168,7 @@ export default function LoginPage() {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-card px-2 text-muted-foreground">
-                    New to DataVault?
+                    New to DataForge?
                   </span>
                 </div>
               </div>

@@ -391,7 +391,7 @@ export default function HomePage() {
                     />
                   </svg>
                 </div>
-                <span className="text-lg font-bold">DataVault</span>
+                <span className="text-lg font-bold">DataForge</span>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
                 Decentralized marketplace for robotics training data. Built on
@@ -491,7 +491,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-12 border-t border-border/40 pt-8 text-center text-sm text-muted-foreground">
-            © 2025 DataVault. Built on Solana. All rights reserved.
+            © 2025 DataForge. Built on Solana. All rights reserved.
           </div>
         </div>
       </footer>

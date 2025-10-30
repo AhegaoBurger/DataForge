@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "Turn your smartphone into a data collection device. Earn cryptocurrency for capturing videos of everyday tasks. Built on Solana.",
   generator: "v0.app",
   icons: {
-    icon: "/unimake_no_bg.png",
+    icon: "/dataforge_logo_favicon.png",
   },
 };
 
